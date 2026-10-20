@@ -36,8 +36,11 @@ Known problems in build 37:
 
 Build 37 is not installed on the iPhone.
 
-The IPA is unsigned.
-IPA: `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa`.
+The Release IPA is unsigned.
+IPA: `IPA/rhythm-heaven/RhythmHeaven-build37-release-20261021.ipa`.
+SHA-256 `3c951b13fff35736c4698e5db6a80b1271f86f16498d96738017a1f42fe39ba7`.
+Size 2,743,608,097 bytes.
+The Debug IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa`.
 SHA-256 `e642b5b9f2fbd90e88796de246debece49b4c0b3dc5a5a06b742c00a63ade534`.
 Size 2,743,608,067 bytes.
 

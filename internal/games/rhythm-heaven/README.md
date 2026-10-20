@@ -24,10 +24,12 @@ Known problems in build 37:
 - Builds 38 and 39 tried to fix these problems. They made the start page crash. They are not used.
 
 Build 37 is not installed on the iPhone. The iPhone has build 30.
-The IPA is unsigned. Sign it at install time.
-The IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa`.
-The SHA-256 is `e642b5b9f2fbd90e88796de246debece49b4c0b3dc5a5a06b742c00a63ade534`.
-It is 2,743,608,067 bytes.
+The Release IPA is unsigned. Sign it at install time.
+The Release IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-release-20261021.ipa`.
+The SHA-256 is `3c951b13fff35736c4698e5db6a80b1271f86f16498d96738017a1f42fe39ba7`.
+It is 2,743,608,097 bytes.
+The Debug IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa`.
+Its SHA-256 is `e642b5b9f2fbd90e88796de246debece49b4c0b3dc5a5a06b742c00a63ade534`.
 
 ## 2026-10-21: Long menu drag (build 36)
 
