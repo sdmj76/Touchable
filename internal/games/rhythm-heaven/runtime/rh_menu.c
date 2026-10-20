@@ -80,6 +80,7 @@ static void start_pointer_file(void) {
     static char path[1024];
     if (*name == '/' || !home) snprintf(path, sizeof path, "%s", name);
     else snprintf(path, sizeof path, "%s/%s", home, name);
+    LOG("Pointer file %s", path);
     pthread_t thread;
     if (pthread_create(&thread, NULL, pointer_file, path)) die("Cannot start pointer test input");
     pthread_detach(thread);
@@ -166,26 +167,76 @@ static int list_frame(void *list, int scroll, ss_pointer_frame *frame) {
         frame->scroll = intersect((ss_pointer_rect){960 + ox - width / 2, 540 - oy - (rows + 1) * spacing / 2,
                                                    width, (rows + 1) * spacing}, picture);
     }
+    int slots = scroll ? integer(list, 0x44) : 0;
+    float base_y = 0, ref_x = 0, ref_width = fmaxf(items[0] ? integer(items[0], 0x30) + 48 : 200, 200);
+    int have_rows = 0;
+    if (scroll) {
+        int first_page = slots > 0 && slots < count ? slots : count;
+        for (int i = 0; i < count && !have_rows; ++i) {
+            void *item = items[i];
+            if (!item) continue;
+            void *node = ptr(item, ((uint8_t *)item)[0x28] ? 0x18 : 0x10);
+            if (!sprite(node) || ((uint8_t *)node)[0x84] != 1) continue;
+            float x = 0, y = 0;
+            if (!node_point(ptr(list, 0x70), node, &x, &y)) continue;
+            /* The first page is laid out item by item. The game parks every later
+               item at the same off-page position, but draws it on the next row. */
+            base_y = i < first_page ? y + i * spacing : y;
+            ref_x = x;
+            have_rows = 1;
+        }
+    }
+    int dump = 0;
+    if (trace) {
+        static void *dump_list;
+        static int dump_count, dump_selected, dump_row, dump_slot;
+        int row = integer(list, 0x48);
+        int slot = spacing > 0 ? (int)lroundf(real(list, 0x50) / spacing) : 0;
+        if (list != dump_list || count != dump_count || selected != dump_selected || row != dump_row || slot != dump_slot) {
+            dump = 1; dump_list = list; dump_count = count; dump_selected = selected; dump_row = row; dump_slot = slot;
+            LOG("POINTER dump list %p count %d selected %d row %d slot %d offset %.1f slots %d low %d high %d anchor %.1f %.1f scroll %.1f %.1f %.1fx%.1f",
+                list, count, selected, row, slot, real(list, 0x50), integer(list, 0x44), integer(list, 0x58),
+                integer(list, 0x5c), ox, oy, frame->scroll.x, frame->scroll.y, frame->scroll.width, frame->scroll.height);
+        }
+    }
     for (int i = 0; i < count; ++i) {
         void *item = items[i];
-        if (!item) continue;
-        void *node = ptr(item, ((uint8_t *)item)[0x28] ? 0x18 : 0x10);
+        void *node = NULL;
+        float x = 0, y = 0;
+        int visible = 0, found = 0;
+        if (item) {
+            node = ptr(item, ((uint8_t *)item)[0x28] ? 0x18 : 0x10);
+            visible = sprite(node) && ((uint8_t *)node)[0x84] == 1;
+        }
         /* Long lists retain hidden cloned rows. Their local positions can match
            visible rows. Do not let those clones take a visible row's tap. */
-        if (!sprite(node) || ((uint8_t *)node)[0x84] != 1) continue;
-        float x = 0, y = 0;
-        int found = 0;
-        if (scroll) found = node_point(ptr(list, 0x70), node, &x, &y);
+        if (!visible) {
+            if (dump) LOG("POINTER dump item %d item %p node %p vis 0", i, item, node);
+            continue;
+        }
+        if (scroll && have_rows) {
+            x = ref_x;
+            y = base_y - i * spacing;
+            found = 1;
+        } else if (scroll) found = node_point(ptr(list, 0x70), node, &x, &y);
         else {
             void *root = ptr(owner, 0x40);
             for (int n = 0; root && n < 96 && !found; ++n, root = ptr(root, 0x98)) found = node_point(root, node, &x, &y);
         }
-        if (!found) continue;
-        float width = fmaxf(integer(item, 0x30) + 48, 200);
+        if (!found) {
+            if (dump) LOG("POINTER dump item %d item %p node %p vis 1 not found", i, item, node);
+            continue;
+        }
+        float width = scroll ? ref_width : fmaxf(integer(item, 0x30) + 48, 200);
+        int before = frame->count;
         target(frame, i, x + ox, y + oy, width, scroll ? spacing : 84, i == selected ? SS_POINTER_SELECTED : 0, -1);
+        if (dump) LOG("POINTER dump item %d item %p node %p vis 1 at %.1f %.1f target %d", i, item, node, x, y, frame->count > before);
     }
     trace_frame(frame);
-    return frame->count > 0;
+    /* A long list can scroll past the rows that the game has laid out. Keep the
+       empty menu frame so the phone does not show the fallback A and D-pad
+       areas. Those areas turn a continued drag into a button press. */
+    return 1;
 }
 static int list_input(void *list, void *pad, int scroll, uintptr_t original) {
     ss_pointer_frame frame;
@@ -292,7 +343,8 @@ static int map_frame(void *scene, ss_pointer_frame *frame) {
         target(frame, id, ox + col * width, oy + row * height, 160, 150, flags, -1);
     }
     trace_frame(frame);
-    return frame->count > 0;
+    /* Keep an empty map frame so a drag at the edge cannot fall back to a button press. */
+    return 1;
 }
 static void map_focus(void *scene, int col, int row) {
     int old_x = integer(scene, 0x5298), old_y = integer(scene, 0x529c);

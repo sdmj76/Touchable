@@ -1,5 +1,64 @@
 # Rhythm Heaven
 
+## 2026-10-21: Items after the first list page (build 37)
+
+A long list draws the rows after its first page. The game parks those rows at one off-page position.
+Build 36 gave them no touch area. Only the first 13 rows were clickable.
+
+Build 37 computes each row from the list geometry:
+
+- It reads the row base and the row spacing from the first page.
+- It places every visible row at `base - item number * spacing`.
+- It keeps an empty menu frame and an empty map frame when no row has a touch area.
+
+Check results:
+
+- PlayCover, Demo Videos -> Rhythm Games: the items after 三只螃蟹 are clickable. 滚滚行进, 混奏 3, and later items open.
+- The demo list, the archive lists, and the start menu keep their behavior.
+- `test_touch`, `test_menu`, `test_touch_layout`, and `games.py check` pass.
+
+Known problems in build 37:
+
+- In the Music Room, 其他类别 -> second level, a drag can count as a tap.
+- In the Music Room, 我的最爱 crashes when it is clicked.
+- Builds 38 and 39 tried to fix these problems. They made the start page crash. They are not used.
+
+Build 37 is not installed on the iPhone. The iPhone has build 30.
+The IPA is unsigned. Sign it at install time.
+The IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa`.
+The SHA-256 is `e642b5b9f2fbd90e88796de246debece49b4c0b3dc5a5a06b742c00a63ade534`.
+It is 2,743,608,067 bytes.
+
+## 2026-10-21: Long menu drag (build 36)
+
+A long menu can scroll past the rows that the game has laid out.
+The old code then published no menu frame.
+The phone showed the fallback A and D-pad areas.
+A continued drag pressed A.
+The game ran the selected item.
+
+Build 36 keeps an empty menu frame. It also keeps an empty map frame.
+The phone stays in direct-touch mode. The fallback areas stay hidden.
+A drag does not press a button.
+
+Check results:
+
+- Mac host, 41-item demo video list: before the change, a deep drag removed the menu frame. After the change, the frame stays and no item runs.
+- `test_touch`, `test_menu`, `test_touch_layout`, and `games.py check` pass.
+- The device build passes.
+
+Build 36 is not installed.
+
+Limits:
+
+- The adapter does not lay out list rows beyond the game's active window. A deep drag can show an empty list. Exit the menu and enter it again.
+- The iPhone is not tested.
+
+The IPA is unsigned. Sign it at install time.
+The IPA is `IPA/rhythm-heaven/RhythmHeaven-build36-long-menu-drag-20261021.ipa`.
+The SHA-256 is `50aec2ec5df1f2a75ff02092a8311b77ab4db6ea0c64dfee9f34926ecd24c8b6`.
+It is 2,743,607,711 bytes.
+
 ## 2026-10-20: Simplified Chinese per-app language (build 35)
 
 The system stores an app language with a region. Hong Kong uses tags such as `zh-Hans-HK` and `zh-Hant-HK`.
@@ -306,13 +365,13 @@ The records below do not include the short start check after this reorganization
 | Active content | `.nitenphone/work/rhythm-heaven/base/` |
 | Active modules | `.nitenphone/work/rhythm-heaven/patched/`, runs `main` and `sdk` |
 | Graphics | 1920×1080, NVN to Metal, 35 shader stages |
-| iPad/iPhone app | Build 35 (unsigned, not installed. The iPhone has build 30, the iPad mini has build 27), Bundle ID `com.mmmz.NitenphoneSilksong` |
+| iPad/iPhone app | Build 37 (unsigned, not installed. The iPhone has build 30, the iPad mini has build 27), Bundle ID `com.mmmz.NitenphoneSilksong` |
 | Phone save | `Documents/Saves/RhythmHeaven` |
 | Play record | Multiple rhythm games, some Remixes, menus, and save read/write are recorded. The full play-through is not verified |
 | Direct touch | Normal lists, the map, pause options, the rhythm archive, the music room, and demo videos |
 | Save check | After build 29 was installed on the iPhone, the 3 files matched the backup. After the build 15 recheck, both saves kept 80 P modes |
 
-Build 35 fixes the Simplified Chinese per-app language mapping. Build 35 is unsigned and not installed.
+Build 37 makes the list rows after the first page clickable. Build 37 is unsigned and not installed. Build 37 keeps the empty-frame fix from build 36. Build 36 fixes the long menu drag. A deep drag no longer presses A. Build 36 is unsigned and not installed. Build 35 fixes the Simplified Chinese per-app language mapping. Build 35 is unsigned and not installed.
 Build 34 uses the system glass press effect. Build 33 declares Game Mode and stays at 60 Hz. Build 32 makes the transition between the picture edge and the letterbox border smoother. Build 31 makes the letterbox border follow the picture faster (time constant 0.06 seconds). None of these builds is installed on a device yet.
 Build 30 rewrites the border glow. It passed unit tests and the offline render comparison. The user ran it on the iPhone.
 Build 29 fixes the performance and touch controls of BeatSpell. It passed the Mac host and Simulator checks and is installed on the iPhone. BeatSpell on the iPhone is not confirmed yet.
