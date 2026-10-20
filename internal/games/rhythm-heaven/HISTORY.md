@@ -36,13 +36,12 @@ Known problems in build 37:
 
 Build 37 is not installed on the iPhone.
 
-The Release IPA is unsigned.
-IPA: `IPA/rhythm-heaven/RhythmHeaven-build37-release-20261021.ipa`.
-SHA-256 `3c951b13fff35736c4698e5db6a80b1271f86f16498d96738017a1f42fe39ba7`.
-Size 2,743,608,097 bytes.
-The Debug IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa`.
-SHA-256 `e642b5b9f2fbd90e88796de246debece49b4c0b3dc5a5a06b742c00a63ade534`.
-Size 2,743,608,067 bytes.
+The Release IPA uses Bundle ID `com.sdmj76.RhythmHeaven`. It is unsigned.
+IPA: `IPA/rhythm-heaven/RhythmHeaven-build37-release-com.sdmj76.RhythmHeaven-20261021.ipa`.
+SHA-256 `d59177ff2e9403bff919536d4a355f5a1a30c9b06d3b6a1c2d24b5fd6e27fae9`.
+Size 2,743,608,093 bytes.
+The earlier Release IPA `IPA/rhythm-heaven/RhythmHeaven-build37-release-20261021.ipa` and the Debug IPA `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa` use Bundle ID `com.mmmz.NitenphoneSilksong`.
+The old save is in the container of that ID. The new app starts with a new save.
 
 ## Long menu drag (build 36)
 

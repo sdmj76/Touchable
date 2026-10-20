@@ -24,12 +24,12 @@ Known problems in build 37:
 - Builds 38 and 39 tried to fix these problems. They made the start page crash. They are not used.
 
 Build 37 is not installed on the iPhone. The iPhone has build 30.
-The Release IPA is unsigned. Sign it at install time.
-The Release IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-release-20261021.ipa`.
-The SHA-256 is `3c951b13fff35736c4698e5db6a80b1271f86f16498d96738017a1f42fe39ba7`.
-It is 2,743,608,097 bytes.
-The Debug IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-long-list-tap-20261021.ipa`.
-Its SHA-256 is `e642b5b9f2fbd90e88796de246debece49b4c0b3dc5a5a06b742c00a63ade534`.
+The Release IPA uses Bundle ID `com.sdmj76.RhythmHeaven`. It is unsigned. Sign it at install time.
+The Release IPA is `IPA/rhythm-heaven/RhythmHeaven-build37-release-com.sdmj76.RhythmHeaven-20261021.ipa`.
+The SHA-256 is `d59177ff2e9403bff919536d4a355f5a1a30c9b06d3b6a1c2d24b5fd6e27fae9`.
+It is 2,743,608,093 bytes.
+The earlier build 37 Release and Debug IPAs use Bundle ID `com.mmmz.NitenphoneSilksong`.
+The old save is in the container of that ID. The new app starts with a new save.
 
 ## 2026-10-21: Long menu drag (build 36)
 
@@ -367,7 +367,7 @@ The records below do not include the short start check after this reorganization
 | Active content | `.nitenphone/work/rhythm-heaven/base/` |
 | Active modules | `.nitenphone/work/rhythm-heaven/patched/`, runs `main` and `sdk` |
 | Graphics | 1920×1080, NVN to Metal, 35 shader stages |
-| iPad/iPhone app | Build 37 (unsigned, not installed. The iPhone has build 30, the iPad mini has build 27), Bundle ID `com.mmmz.NitenphoneSilksong` |
+| iPad/iPhone app | Build 37 (unsigned, not installed. The iPhone has build 30, the iPad mini has build 27), Bundle ID `com.sdmj76.RhythmHeaven` |
 | Phone save | `Documents/Saves/RhythmHeaven` |
 | Play record | Multiple rhythm games, some Remixes, menus, and save read/write are recorded. The full play-through is not verified |
 | Direct touch | Normal lists, the map, pause options, the rhythm archive, the music room, and demo videos |
@@ -423,7 +423,7 @@ For the workspace reorganization rules, see the [maintenance notes](../../../doc
 - The Rhythm Heaven Mac host runs in command-line mode. It does not present to a window. Thus host runs do not use the letterbox border code.
 - Controller haptics are tested only with DualSense and iPad mini. Other controllers, iPhone with a controller, controller disconnect and reconnect, and long continuous haptics are not tested one by one.
 - Device screenshots confirm the language setting entry. The language selection row was not tapped automatically. Device language tests use the `-AppleLanguages` launch argument. Only six of the 13 languages are checked one by one.
-- The Bundle ID temporarily borrows `com.mmmz.NitenphoneSilksong`. Before a change, a save migration is necessary.
+- The PlayCover app uses Bundle ID `com.sdmj76.RhythmHeaven`. The old save is in the container of `com.mmmz.NitenphoneSilksong`. Copy the save after the first launch of the new app. A device build with the new ID needs a new provisioning profile.
 - The build 28 Liquid Glass is checked only in the iOS Simulator. The appearance and the dark layer on the iPhone are not confirmed. The build 34 system press effect is checked only with one finger in the Simulator. A two-finger simultaneous press and the feel on the iPhone are not confirmed. Faded directions are not glass and show no effect when pressed.
 - The build 29 BeatSpell changes are checked only on the Mac host and in the iOS Simulator. There are no iPhone frame time or feel results. The host tested only the first battle of chapter 1 and the tutorial. Backflip, branches, items, and the map are not tested one by one.
 - In BeatSpell, the small D-pad covers part of the HP display at the bottom-left corner. On iPad, it covers more. The BeatSpell items, map, and swap magic menus are not tapped directly.
