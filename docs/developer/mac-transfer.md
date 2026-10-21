@@ -9,8 +9,8 @@ The package does not contain original packages, keys, signing identities, provis
 Select one registered game. Use a new output directory.
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/package_mac_transfer.py --game rhythm-heaven \
-  --output .nitenphone/build/transfers/rhythm-heaven-build15-mac
+.touchable/venv/bin/python internal/tools/package_mac_transfer.py --game rhythm-heaven \
+  --output .touchable/build/transfers/rhythm-heaven-build15-mac
 ```
 
 The tool reads paths from `internal/tools/workspace.py` and the selected game manifest.
@@ -64,4 +64,4 @@ See [Apple's signing identity procedure](https://developer.apple.com/documentati
 
 An unsigned build checks compilation and linking.
 It does not check signing, device installation, or gameplay on the new Mac.
-Store evidence in `.nitenphone/work/<id>/reports/` and `.nitenphone/build/games/<id>/logs/`.
+Store evidence in `.touchable/work/<id>/reports/` and `.touchable/build/games/<id>/logs/`.

@@ -59,7 +59,7 @@ def main():
         text += 'GAME := ' + game.id + '\n'
         text += 'HOST_OUTPUT := ' + make_quote(relative_host / (game.id + '-host')) + '\n'
         text += 'OBJECT_DIR := ' + make_quote(relative_host / 'obj') + '\n'
-        text += 'GAME_HEADER := ' + make_quote(relative_host / 'niten_game_config.h') + '\n'
+        text += 'GAME_HEADER := ' + make_quote(relative_host / 'touchable_game_config.h') + '\n'
         text += 'OBJECTS := ' + ' '.join(make_quote(path) for path in objects) + '\n'
         text += 'FLAGS := ' + shlex.join(flags).replace('$', '$$').replace('#', r'\#') + '\n'
         for source, obj in zip(relative_sources, objects):

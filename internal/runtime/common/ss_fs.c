@@ -1,5 +1,5 @@
 /* The common filesystem keeps its APFS save transaction implementation.
- * Game-specific file seeding is disabled with NITENPHONE_SWITCH_RUNTIME. */
+ * Game-specific file seeding is disabled with TOUCHABLE_SWITCH_RUNTIME. */
 #include <hle_fs.c>
 #include <sys/statvfs.h>
 

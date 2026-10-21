@@ -16,13 +16,13 @@ Read completed packages in `IPA/<id>/`.
 | `games/`, `runtime/`, `platform/` | The same directories under `internal/` |
 | `tools/`, `tests/`, `patches/`, `requirements.txt` | The same paths under `internal/` |
 | Developer documents in `docs/` | `docs/developer/` |
-| `work/` | `.nitenphone/work/` |
-| Game save directories under `work/<id>/saves/` | `.nitenphone/saves/<id>/`; local compatibility links remain |
-| `build/` | `.nitenphone/build/` |
+| `work/` | `.touchable/work/` |
+| Game save directories under `work/<id>/saves/` | `.touchable/saves/<id>/`; local compatibility links remain |
+| `build/` | `.touchable/build/` |
 | `build/games/<id>/ipa/` | `IPA/<id>/` |
-| `upstream/d2r-mobile/` | `.nitenphone/dependencies/d2r-mobile/` |
-| `tools/vendor/*`, `tools/dotnet/` | `.nitenphone/dependencies/` |
-| `.venv/` | New `.nitenphone/venv/`; the prior environment remains archived locally |
+| `upstream/d2r-mobile/` | `.touchable/dependencies/d2r-mobile/` |
+| `tools/vendor/*`, `tools/dotnet/` | `.touchable/dependencies/` |
+| `.venv/` | New `.touchable/venv/`; the prior environment remains archived locally |
 | `MyGameFiles/RhythmHeaven/` | `MyGameFiles/rhythm-heaven/` |
 
 Application Bundle IDs, phone save namespaces, module hashes, and game compatibility status remain unchanged.
@@ -31,16 +31,16 @@ Local settings preserve the existing Bundle IDs.
 Raw packages and keys remain unchanged.
 Existing apps and test evidence remain retained.
 New IPAs are published to the local output directory only after signature and archive checks.
-Prior IPAs move to `.nitenphone/archive/ipa/` after a successful replacement.
+Prior IPAs move to `.touchable/archive/ipa/` after a successful replacement.
 They are not deleted.
 
 `ROOT` in `internal/tools/workspace.py` is the source root.
 `PROJECT_ROOT` is the repository root.
 `DEPENDENCIES` is the local dependency directory.
 `state_root()` supplies work, build, and save paths.
-`NITENPHONE_STATE_DIR` selects an isolated rebuild directory.
+`TOUCHABLE_STATE_DIR` selects an isolated rebuild directory.
 The launcher uses this setting for a full rebuild.
-Local signing settings stay in the main `.nitenphone/config.json`.
+Local signing settings stay in the main `.touchable/config.json`.
 A generated header selects each build's shader chain.
 The Xcode project and host generator use that header before the source header.
 
@@ -55,13 +55,13 @@ Full rebuilds start from user-provided NSP files in new work directories.
 They do not reuse the active extracted modules or shader libraries.
 Pinned tool dependencies are checked separately in a clean copy.
 
-Detailed results are recorded in `.nitenphone/work/silksong/reports/reorganization-20261017/`.
+Detailed results are recorded in `.touchable/work/silksong/reports/reorganization-20261017/`.
 The Rhythm Heaven record links to the same shared validation.
-Build output and stage logs remain under `.nitenphone/rebuilds/`.
-First-launch tool logs remain under `.nitenphone/build/tooling/logs/`.
+Build output and stage logs remain under `.touchable/rebuilds/`.
+First-launch tool logs remain under `.touchable/build/tooling/logs/`.
 
 The user confirmed that a Finder double-click opens the game selection menu.
-That check used the previous launcher name, `Nitenphone.command`.
+That check used the previous launcher name, `Touchable.command`.
 See [the rename record](project-rename.md) for the current launcher name.
 Interactive terminal checks also exercise game selection, operation selection, and installation.
 Desktop automation did not control Finder or Terminal.

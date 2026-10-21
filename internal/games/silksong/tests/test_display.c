@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "../../../../.nitenphone/dependencies/d2r-mobile/dm/host/dm.h"
+#include "../../../../.touchable/dependencies/d2r-mobile/dm/host/dm.h"
 
 module_t g_mod[MAX_MOD];
 int g_nmod;
@@ -20,7 +20,7 @@ int gate_svc_present(int number) {
     return number == 0xf0 ? !!(present_gates & 1) :
            number == 0xf1 ? !!(present_gates & 2) : 0;
 }
-/* niten_game_install also installs the touch adapter. It needs the game modules. */
+/* touchable_game_install also installs the touch adapter. It needs the game modules. */
 void ss_touch_ui_install(void) {}
 
 #include "../../../runtime/common/ss_display.c"

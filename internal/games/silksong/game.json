@@ -3,8 +3,8 @@
   "id": "silksong",
   "display_name": "丝之歌",
   "product_name": "Silksong",
-  "bundle_id": "com.mmmz.NitenphoneProbe",
-  "build_version": 21,
+  "bundle_id": "com.mmmz.TouchableSilksong",
+  "build_version": 28,
   "title_id": "010013c00e930000",
   "profile": "profile.json",
   "content_dir": "v655360",
@@ -46,7 +46,7 @@
     "platform/ios/Haptics.m"
   ],
   "compile_defines": [
-    "NITENPHONE_SWITCH_RUNTIME"
+    "TOUCHABLE_SWITCH_RUNTIME"
   ],
   "shader_chain_header": "runtime/ss_shader_chain.h",
   "adapters": {

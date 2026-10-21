@@ -17,8 +17,8 @@ Use [the agent workflow](../docs/developer/agent-workflow.md).
 Run commands from the repository root:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/games.py check
-.nitenphone/venv/bin/python -m unittest discover -s internal/tests -p 'test_*.py' -v
+.touchable/venv/bin/python internal/tools/games.py check
+.touchable/venv/bin/python -m unittest discover -s internal/tests -p 'test_*.py' -v
 ```
 
 `tools/workspace.py` defines source paths and local data paths.

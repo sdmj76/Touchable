@@ -11,7 +11,7 @@
 
 A new user must enter the Team ID of the Xcode development team.
 The launcher makes a separate Bundle ID for each game.
-These settings are saved in `.nitenphone/config.json`.
+These settings are saved in `.touchable/config.json`.
 The settings do not go into Git.
 To change the team or the signing method, select "Signing settings" in the menu.
 
@@ -32,7 +32,7 @@ The launcher checks the IPA checksum and the app identity.
 The launcher checks the signature expiry date and the device authorization.
 If the app is already on the iPhone, the launcher first backs up Documents.
 If the backup fails, the installation stops.
-The backup is in `.nitenphone/saves/<game ID>/phone-before-install-*/`.
+The backup is in `.touchable/saves/<game ID>/phone-before-install-*/`.
 
 After installation, open the game on the iPhone.
 Make sure that the original save data loads.

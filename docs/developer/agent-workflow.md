@@ -41,9 +41,9 @@ Run only the checks that apply to the task. A documentation task does not requir
 
 ```sh
 TASK_GAME=silksong
-.nitenphone/venv/bin/python internal/tools/games.py list --json
-.nitenphone/venv/bin/python internal/tools/games.py check
-.nitenphone/venv/bin/python -m unittest discover -s internal/tests -p 'test_*.py' -v
+.touchable/venv/bin/python internal/tools/games.py list --json
+.touchable/venv/bin/python internal/tools/games.py check
+.touchable/venv/bin/python -m unittest discover -s internal/tests -p 'test_*.py' -v
 ```
 
 `games.py check` checks all registered identities. It also checks adapter configuration and source files. It does not establish game compatibility.
@@ -55,7 +55,7 @@ bash internal/tools/bootstrap.sh
 bash internal/tools/bootstrap_shader.sh
 ```
 
-The scripts fetch pinned sources and build local tools. The first script applies project patches and installs `internal/requirements.txt` into `.nitenphone/venv`. Preserve existing upstream edits before bootstrap. The dependency file includes `UnityPy` for Silksong shader extraction.
+The scripts fetch pinned sources and build local tools. The first script applies project patches and installs `internal/requirements.txt` into `.touchable/venv`. Preserve existing upstream edits before bootstrap. The dependency file includes `UnityPy` for Silksong shader extraction.
 
 ## Maintain the workspace
 
@@ -73,22 +73,22 @@ Reuse the configured content, rewritten modules, and shader libraries when those
 
 ```sh
 bash internal/tools/build_host.sh --game "$TASK_GAME"
-mkdir -p ".nitenphone/work/$TASK_GAME/temp"
-TASK_SAVE_DIR=$(mktemp -d ".nitenphone/work/$TASK_GAME/temp/agent-saves.XXXXXX")
-.nitenphone/venv/bin/python internal/tools/run_host.py --game "$TASK_GAME" --seconds 30 \
+mkdir -p ".touchable/work/$TASK_GAME/temp"
+TASK_SAVE_DIR=$(mktemp -d ".touchable/work/$TASK_GAME/temp/agent-saves.XXXXXX")
+.touchable/venv/bin/python internal/tools/run_host.py --game "$TASK_GAME" --seconds 30 \
   --save-dir "$TASK_SAVE_DIR"
 ```
 
 This test starts with an empty save directory. Copy the required save fixture into `TASK_SAVE_DIR` before launch if the task needs an existing save. Keep the source save unchanged.
 
-The build log is `.nitenphone/build/games/<id>/logs/host-build.log`. The runtime log is `.nitenphone/build/games/<id>/logs/host-boot.log`. Archive each relevant log under a task-specific name before another run. The tool replaces the runtime log and resets the input file on each launch.
+The build log is `.touchable/build/games/<id>/logs/host-build.log`. The runtime log is `.touchable/build/games/<id>/logs/host-boot.log`. Archive each relevant log under a task-specific name before another run. The tool replaces the runtime log and resets the input file on each launch.
 
 `run_host.py` reports the guest exit code or the time limit. Its own successful exit does not prove that the guest ran correctly. Read the complete log. Check the specific menu, scene, input, audio, or save behavior required by the task.
 
 Send input from another terminal while the host runs:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/input_host.py --game "$TASK_GAME" A --seconds 0.15
+.touchable/venv/bin/python internal/tools/input_host.py --game "$TASK_GAME" A --seconds 0.15
 ```
 
 For a save regression, load the copied save, play, open pause, save and quit, return to the title menu, and reload. A 30-second boot alone does not cover this sequence. Select a suitable time limit and record the input sequence.
@@ -98,7 +98,7 @@ For a save regression, load the copied save, play, open pause, save and quit, re
 To check the active output:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/rewrite_game.py --game "$TASK_GAME" --verify-only
+.touchable/venv/bin/python internal/tools/rewrite_game.py --game "$TASK_GAME" --verify-only
 ```
 
 This command checks module hashes and the pinned upstream revision. It runs structural checks and Unicorn equivalence checks with 100 mutations per module. It updates `verification.json` and the rewrite logs. Archive earlier evidence before the check if it is needed for comparison.
@@ -106,8 +106,8 @@ This command checks module hashes and the pinned upstream revision. It runs stru
 To test a changed rewriter, use a new directory:
 
 ```sh
-TASK_REWRITE_DIR=".nitenphone/work/$TASK_GAME/patched-agent-$(date +%Y%m%d-%H%M%S)"
-.nitenphone/venv/bin/python internal/tools/rewrite_game.py --game "$TASK_GAME" --out "$TASK_REWRITE_DIR"
+TASK_REWRITE_DIR=".touchable/work/$TASK_GAME/patched-agent-$(date +%Y%m%d-%H%M%S)"
+.touchable/venv/bin/python internal/tools/rewrite_game.py --game "$TASK_GAME" --out "$TASK_REWRITE_DIR"
 ```
 
 The output directory must not exist. Review the verification report before you select it as the active `patched_dir`. The host reads `patched_dir` from the manifest. The iOS generator can test another directory with `--modules "$TASK_REWRITE_DIR"`.
@@ -119,7 +119,7 @@ Signal effects in Unicorn use a model. Changes to the native signal bridge also 
 ## Change a game package version
 
 1. Inspect the new package with `internal/tools/prepare_game.py inspect` and the explicit game ID.
-2. Select a new content directory inside `.nitenphone/work/<id>/`.
+2. Select a new content directory inside `.touchable/work/<id>/`.
 3. Extract the base package, or merge the base and update with `extract-update`.
 4. Require the extraction hash checks to pass.
 5. Analyze the new content with `internal/tools/analyze_game.py` and a separate report directory.
@@ -140,8 +140,8 @@ Use profile fields for per-game shader bindings, vertex attribute types, and win
 Rebuild shader inputs only when the task changes game content, shader capture, translation tools, or shader options:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/extract_shaders.py --game "$TASK_GAME"
-.nitenphone/venv/bin/python internal/tools/build_shaders.py --game "$TASK_GAME" --ios
+.touchable/venv/bin/python internal/tools/extract_shaders.py --game "$TASK_GAME"
+.touchable/venv/bin/python internal/tools/build_shaders.py --game "$TASK_GAME" --ios
 ```
 
 `--ios` builds Mac and iOS libraries. The build writes `chain.json`, `shader_map.tsv`, and the game's generated shader chain header. Regenerate the iOS project after the chain changes. Preserve old shader chains needed for comparisons.
@@ -168,8 +168,8 @@ Use `DM_RES_CENSUS=2` for retained Metal resource diagnosis. Record memory acros
 Build only the upstream graphics test targets that apply to the change. For example:
 
 ```sh
-make -C .nitenphone/dependencies/d2r-mobile/dm/gfx/tests t_reorder_chain
-MTL_DEBUG_LAYER=1 .nitenphone/dependencies/d2r-mobile/dm/gfx/tests/t_reorder_chain
+make -C .touchable/dependencies/d2r-mobile/dm/gfx/tests t_reorder_chain
+MTL_DEBUG_LAYER=1 .touchable/dependencies/d2r-mobile/dm/gfx/tests/t_reorder_chain
 ```
 
 Consult that directory's Makefile for the complete suite. The existing build 8 report lists sample-data and abort limits for two tests. Record actual failures and compare them with the prior baseline.
@@ -181,16 +181,16 @@ The Python discovery command excludes the C tests. Use the relevant C test's bui
 Examples for the audio mixer and Silksong display:
 
 ```sh
-mkdir -p .nitenphone/build/checks/common .nitenphone/build/games/silksong/tests
+mkdir -p .touchable/build/checks/common .touchable/build/games/silksong/tests
 xcrun clang -Wall -Wextra -pthread -Iinternal/runtime/common \
   internal/tests/common/test_audren.c internal/runtime/common/ss_audren.c \
-  -o .nitenphone/build/checks/common/test_audren
-.nitenphone/build/checks/common/test_audren
+  -o .touchable/build/checks/common/test_audren
+.touchable/build/checks/common/test_audren
 xcrun clang -Wall -Wextra -Werror \
-  -Iinternal/runtime/common -I.nitenphone/dependencies/d2r-mobile/dm/host \
-  internal/games/silksong/tests/test_display.c -o .nitenphone/build/games/silksong/tests/test_display
-.nitenphone/build/games/silksong/tests/test_display
-.nitenphone/venv/bin/python internal/games/silksong/tests/test_viewport.py
+  -Iinternal/runtime/common -I.touchable/dependencies/d2r-mobile/dm/host \
+  internal/games/silksong/tests/test_display.c -o .touchable/build/games/silksong/tests/test_display
+.touchable/build/games/silksong/tests/test_display
+.touchable/venv/bin/python internal/games/silksong/tests/test_viewport.py
 ```
 
 Select the clock, thread suspension, haptics, memory, or branch probe checks when those components change.
@@ -199,19 +199,19 @@ When the Switch-style touch layout changes, run the layout check. It covers phon
 
 ```sh
 xcrun clang -Wall -Wextra -Werror -Iinternal/platform/ios \
-  internal/tests/common/test_touch_layout.c -o .nitenphone/build/checks/common/test_touch_layout
-.nitenphone/build/checks/common/test_touch_layout
+  internal/tests/common/test_touch_layout.c -o .touchable/build/checks/common/test_touch_layout
+.touchable/build/checks/common/test_touch_layout
 ```
 
 When the app-language mapping changes, run the language check:
 
 ```sh
 xcrun clang -Wall -Wextra -Werror -Iinternal/runtime/common \
-  internal/tests/common/test_language.c -o .nitenphone/build/checks/common/test_language
-.nitenphone/build/checks/common/test_language
+  internal/tests/common/test_language.c -o .touchable/build/checks/common/test_language
+.touchable/build/checks/common/test_language
 ```
 
-`test_world_projection.py` is a v0 regression test. Its default `.nitenphone/work/silksong/phone-features/` path is a compatibility link to the retained v0 modules. An explicit command is `.nitenphone/venv/bin/python internal/games/silksong/tests/test_world_projection.py --modules .nitenphone/work/silksong/patched`. Do not count it as v655360 projection evidence. New camera changes need checks for the exact active module layout.
+`test_world_projection.py` is a v0 regression test. Its default `.touchable/work/silksong/phone-features/` path is a compatibility link to the retained v0 modules. An explicit command is `.touchable/venv/bin/python internal/games/silksong/tests/test_world_projection.py --modules .touchable/work/silksong/patched`. Do not count it as v655360 projection evidence. New camera changes need checks for the exact active module layout.
 
 ## Generate, build, and package the iPhone or iPad app
 
@@ -221,12 +221,12 @@ With verified modules and iOS shaders available:
 
 ```sh
 TASK_PRODUCT=Silksong
-.nitenphone/venv/bin/python internal/tools/prepare_ios.py --game "$TASK_GAME"
-xcodebuild -project ".nitenphone/build/games/$TASK_GAME/ios-project/$TASK_PRODUCT.xcodeproj" \
+.touchable/venv/bin/python internal/tools/prepare_ios.py --game "$TASK_GAME"
+xcodebuild -project ".touchable/build/games/$TASK_GAME/ios-project/$TASK_PRODUCT.xcodeproj" \
   -scheme "$TASK_PRODUCT" -configuration Debug -sdk iphoneos \
-  -derivedDataPath ".nitenphone/build/games/$TASK_GAME/ios" \
+  -derivedDataPath ".touchable/build/games/$TASK_GAME/ios" \
   -allowProvisioningUpdates DEVELOPMENT_TEAM=YOUR_TEAM build
-.nitenphone/venv/bin/python internal/tools/package_ios.py --game "$TASK_GAME"
+.touchable/venv/bin/python internal/tools/package_ios.py --game "$TASK_GAME"
 ```
 
 Replace `YOUR_TEAM` with the local development team. Check the actual signing identity, profile expiry, and registered device. If automatic signing is unavailable, use the selected game's recorded manual signing procedure.
@@ -237,7 +237,7 @@ The packager verifies the signed app and Bundle ID. It creates an IPA, a JSON re
 
 The same project supports iPhone and iPad. When you change the app shell, check the iPad orientation keys, the full-screen setting, and the touch layout on an iPad. The simulator SDK can lack the Metal 4 headers that the runtime needs. A simulator failure does not replace a device build result. Record both outcomes.
 
-The system press response of Liquid Glass controls runs only for real touches. Setting `highlighted` in code does not show it. To check a press look in a simulator, send real touches with an XCUITest and record the screen with `xcrun simctl io <device> recordVideo`. Put an Apple reference control next to the changed control. The tools are in `.nitenphone/work/silksong/reports/glass-press-20261019/tools/`.
+The system press response of Liquid Glass controls runs only for real touches. Setting `highlighted` in code does not show it. To check a press look in a simulator, send real touches with an XCUITest and record the screen with `xcrun simctl io <device> recordVideo`. Put an Apple reference control next to the changed control. The tools are in `.touchable/work/silksong/reports/glass-press-20261019/tools/`.
 
 Declare game-supported languages in `ios.localizations`.
 The generator writes the list to `CFBundleLocalizations`.
@@ -249,7 +249,7 @@ A launch-argument test is not a Settings tap test.
 Record both results.
 
 Set `ios.controller_haptics` to `true` for a game that needs controller vibration.
-The generator writes `NitenControllerHaptics` to the Info.plist.
+The generator writes `TouchableControllerHaptics` to the Info.plist.
 Use a controller with haptics.
 Do not treat accepted haptic API calls as physical feedback.
 Record the controller model and the user's physical result.
@@ -261,8 +261,8 @@ If the task includes installation, back up the relevant application saves before
 Check the existing upstream diff before you edit it:
 
 ```sh
-git -C .nitenphone/dependencies/d2r-mobile status --short
-git -C .nitenphone/dependencies/d2r-mobile diff --stat
+git -C .touchable/dependencies/d2r-mobile status --short
+git -C .touchable/dependencies/d2r-mobile diff --stat
 ```
 
 The existing modified files contain project changes. Preserve them. After an upstream change, update `internal/patches/d2r-mobile.patch` against the pinned revision. Include new source files in the patch. A plain `git diff` omits untracked files. Review the patch before replacement and check that it applies to a clean copy of the pinned source.
@@ -271,7 +271,7 @@ Use the same procedure for `internal/patches/hactool.patch` when hactool changes
 
 ## Record completion
 
-Store detailed local evidence in `.nitenphone/work/<id>/reports/`. Keep source documentation free of keys, save contents, and signing secrets.
+Store detailed local evidence in `.touchable/work/<id>/reports/`. Keep source documentation free of keys, save contents, and signing secrets.
 
 Use this completion record in the task report or relevant game record:
 

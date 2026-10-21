@@ -18,6 +18,15 @@ static void expect(int layout, int first, int second) {
 
 int main(void) {
     rh_touch_hint out;
+    /* Graph archives of a new screen mark a load. Scene archives during a level do not. */
+    assert(!rh_touch_loading(&state, "data:/mesg/CN/CNzh/stage_parasol_00.msbt"));
+    assert(rh_touch_loading(&state, "data:/graph/menu/main_menu/main.spr"));
+    assert(rh_touch_loading(&state, "data:/graph/scene/common/pause.spr"));
+    rh_touch_state level = {1, 0};
+    assert(!rh_touch_loading(&level, "data:/graph/scene/ring/type_00/main.spr"));
+    assert(rh_touch_loading(&level, "data:/graph/prologue/wiper/type_00/prologue.spr"));
+    assert(rh_touch_loading(&level, "data:/graph/result/result.spr"));
+    assert(rh_touch_loading(&level, "data:/graph/beatspell/common/common.spr"));
     /* Paths outside graph/ and shared scene folders do not change anything. */
     assert(!rh_touch_path(&state, "data:/mesg/CN/CNzh/stage_parasol_00.msbt", &out));
     assert(!rh_touch_path(&state, "data:/graph/scene/common/info.spr", &out));

@@ -19,7 +19,7 @@ def scaffold(root, game, display_name=None, product_name=None, bundle_id=None, t
     product = product_name or "".join(part.capitalize() for part in game.split("-"))
     manifest = {
         "schema_version": 1, "id": game, "display_name": display_name or product,
-        "product_name": product, "bundle_id": bundle_id or "com.example.nitenphone." + game,
+        "product_name": product, "bundle_id": bundle_id or "com.example.touchable." + game,
         "build_version": 1, "title_id": title_id, "profile": "profile.json",
         "status": "not-adapted", "save_namespace": game,
         "module_names": [], "runtime_sources": [], "common_runtime_sources": [],

@@ -2,7 +2,7 @@
 set -euo pipefail
 PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$PROJECT_ROOT"
-LOCAL_ROOT="$PROJECT_ROOT/../.nitenphone"
+LOCAL_ROOT="$PROJECT_ROOT/../.touchable"
 DEPENDENCIES="$LOCAL_ROOT/dependencies"
 mkdir -p "$DEPENDENCIES" "$LOCAL_ROOT/build/tooling/logs"
 fetch_source() {
@@ -41,5 +41,5 @@ if [ ! -x "$LOCAL_ROOT/venv/bin/python" ]; then
     xcrun python3 -m venv "$LOCAL_ROOT/venv"
 fi
 "$LOCAL_ROOT/venv/bin/python" -m pip install -r requirements.txt
-shasum -a 256 requirements.txt | awk '{print $1}' > "$LOCAL_ROOT/venv/.nitenphone-ready"
+shasum -a 256 requirements.txt | awk '{print $1}' > "$LOCAL_ROOT/venv/.touchable-ready"
 echo "Local preparation tools are ready. This does not build the iOS game."

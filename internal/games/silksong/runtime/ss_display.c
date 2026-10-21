@@ -1,6 +1,6 @@
 #include "dm.h"
 #include "ss_display.h"
-#include "niten_game.h"
+#include "touchable_game.h"
 #include "ss_touch_ui.h"
 
 static void (*set_resolution)(int, int, int, const void *);
@@ -79,5 +79,5 @@ void ss_display_install(void) {
         (double)size.width / size.height, world.width, world.height, ss_display_output_height());
 }
 
-void niten_game_install(void) { ss_display_install(); ss_touch_ui_install(); }
-int niten_game_host_call(int number, uint64_t *registers) { return ss_display_host_call(number, registers); }
+void touchable_game_install(void) { ss_display_install(); ss_touch_ui_install(); }
+int touchable_game_host_call(int number, uint64_t *registers) { return ss_display_host_call(number, registers); }

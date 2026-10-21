@@ -51,14 +51,14 @@ def shell_tv_mode_toggle(shell):
 
 def write_game_header(game, directory):
     directory.mkdir(parents=True, exist_ok=True)
-    header = directory / 'niten_game_config.h'
+    header = directory / 'touchable_game_config.h'
     content = (
         '/* Generated from games/' + game.id + '/game.json. */\n#pragma once\n' +
-        '#define NITEN_GAME_ID ' + quote(game.id) + '\n' +
-        '#define NITEN_GAME_NAME ' + quote(game.display_name) + '\n' +
-        '#define NITEN_GAME_PRODUCT ' + quote(game.product_name) + '\n' +
-        '#define NITEN_GAME_MODULES {' + ','.join(quote(v) for v in game.module_names) + '}\n' +
-        '#define NITEN_GAME_TITLE_ID 0x' + game.require_title_id() + 'ull\n')
+        '#define TOUCHABLE_GAME_ID ' + quote(game.id) + '\n' +
+        '#define TOUCHABLE_GAME_NAME ' + quote(game.display_name) + '\n' +
+        '#define TOUCHABLE_GAME_PRODUCT ' + quote(game.product_name) + '\n' +
+        '#define TOUCHABLE_GAME_MODULES {' + ','.join(quote(v) for v in game.module_names) + '}\n' +
+        '#define TOUCHABLE_GAME_TITLE_ID 0x' + game.require_title_id() + 'ull\n')
     if not header.exists() or header.read_text() != content: header.write_text(content)
     chain_file = game.shaders_dir / 'chain.json'
     if chain_file.is_file():
@@ -139,16 +139,16 @@ def main():
         with (ROOT / 'platform/ios/Info.plist').open('rb') as stream:
             info = plistlib.load(stream)
         info.update(CFBundleName=game.product_name, CFBundleDisplayName=game.display_name,
-                    NitenGameID=game.id, NitenSaveDirectory=game.save_directory,
-                    NitenRuntimeEnvironment=game.profile.get('environment', {}))
+                    TouchableGameID=game.id, TouchableSaveDirectory=game.save_directory,
+                    TouchableRuntimeEnvironment=game.profile.get('environment', {}))
         # Optional per-game shell settings from game.json "ios".
         shell = game.data.get('ios', {})
         if shell.get('touch_layout') not in (None, 'switch', 'rhythm'):
             raise WorkspaceError('ios.touch_layout must be switch or rhythm.')
-        if shell.get('touch_layout'): info['NitenTouchLayout'] = shell['touch_layout']
-        if shell.get('native_drawable'): info['NitenNativeDrawable'] = True
-        if shell_controller_haptics(shell): info['NitenControllerHaptics'] = True
-        if shell_tv_mode_toggle(shell): info['NitenTVModeToggle'] = True
+        if shell.get('touch_layout'): info['TouchableTouchLayout'] = shell['touch_layout']
+        if shell.get('native_drawable'): info['TouchableNativeDrawable'] = True
+        if shell_controller_haptics(shell): info['TouchableControllerHaptics'] = True
+        if shell_tv_mode_toggle(shell): info['TouchableTVModeToggle'] = True
         localizations = shell_localizations(shell)
         if localizations:
             info['CFBundleLocalizations'] = localizations
@@ -157,7 +157,7 @@ def main():
         if io_buffer is not None:
             if not isinstance(io_buffer, (int, float)) or not 0.001 <= io_buffer <= 0.1:
                 raise WorkspaceError('ios.audio_io_buffer_seconds must be between 0.001 and 0.1.')
-            info['NitenAudioIOBufferDuration'] = float(io_buffer)
+            info['TouchableAudioIOBufferDuration'] = float(io_buffer)
         plist = gen / 'Info.plist'
         with plist.open('wb') as stream: plistlib.dump(info, stream, sort_keys=False)
 

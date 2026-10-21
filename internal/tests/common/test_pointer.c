@@ -90,5 +90,43 @@ int main(void) {
     assert(!ss_pointer_read(&frame));
     assert(ss_pointer_publish(&hints) != hints_token);
     ss_pointer_clear();
+
+    /* Touch controls: no frame shows the default controls. */
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
+    ss_pointer_frame none = {.owner = 1, .mode = SS_POINTER_NONE};
+    ss_pointer_publish(&none);
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
+    nanosleep(&delay, NULL);
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
+    /* A WAIT frame hides the controls, also after a load hitch. */
+    ss_pointer_frame wait = {.owner = 1, .mode = SS_POINTER_WAIT};
+    uint64_t wait_token = ss_pointer_publish(&wait);
+    assert(wait_token && ss_pointer_read(&frame) && frame.mode == SS_POINTER_WAIT && !frame.count);
+    assert(ss_pointer_controls() == SS_CONTROLS_HIDE);
+    nanosleep(&delay, NULL);
+    assert(!ss_pointer_read(&frame) && ss_pointer_controls() == SS_CONTROLS_HIDE);
+    /* A menu frame replaces WAIT at once. A gap after the menu keeps the controls. */
+    ss_pointer_frame menu = {.owner = 2, .mode = SS_POINTER_MENU};
+    assert(ss_pointer_publish(&menu) != wait_token);
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
+    nanosleep(&delay, NULL);
+    assert(ss_pointer_controls() == SS_CONTROLS_KEEP);
+    struct timespec gap = {.tv_sec = 2, .tv_nsec = 300000000};
+    nanosleep(&gap, NULL);
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
+    /* A stopped WAIT frame expires. Then the default controls show again. */
+    ss_pointer_publish(&wait);
+    struct timespec hold = {.tv_sec = 2, .tv_nsec = 100000000};
+    nanosleep(&hold, NULL);
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
+    /* A game that publishes WAIT in every frame sets a longer hold for load hitches. */
+    ss_pointer_set_wait_hold(30000000000ull);
+    ss_pointer_publish(&wait);
+    nanosleep(&hold, NULL);
+    assert(ss_pointer_controls() == SS_CONTROLS_HIDE);
+    ss_pointer_set_wait_hold(SS_POINTER_WAIT_HOLD_NS);
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
+    ss_pointer_clear();
+    assert(ss_pointer_controls() == SS_CONTROLS_SHOW);
     puts("test_pointer: ok");
 }

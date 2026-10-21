@@ -2,7 +2,7 @@
 set -euo pipefail
 PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$PROJECT_ROOT"
-LOCAL_ROOT="$PROJECT_ROOT/../.nitenphone"
+LOCAL_ROOT="$PROJECT_ROOT/../.touchable"
 DEPENDENCIES="$LOCAL_ROOT/dependencies"
 mkdir -p "$DEPENDENCIES" "$LOCAL_ROOT/build/tooling/downloads" "$LOCAL_ROOT/build/tooling/logs"
 DOTNET_VERSION=10.0.401

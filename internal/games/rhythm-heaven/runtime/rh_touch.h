@@ -8,4 +8,7 @@ typedef struct { int active; unsigned keys; } rh_touch_state;  /* zero-initializ
 
 /* Feed one guest path the game opened. Returns 1 and fills *out when the hint changes. */
 int rh_touch_path(rh_touch_state *state, const char *path, rh_touch_hint *out);
+/* Returns 1 when the path is a graph archive of a new screen, so a load or a fade is in progress.
+   Call it before rh_touch_path. The scene archives that a remix opens during play return 0. */
+int rh_touch_loading(const rh_touch_state *state, const char *path);
 #endif

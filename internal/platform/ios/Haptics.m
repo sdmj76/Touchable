@@ -7,7 +7,7 @@
 
 /* All engine and player operations run on this serial queue. Guest HID calls
  * only enqueue parameters. They do not wait for the haptic hardware. */
-@interface NitenHaptics : NSObject {
+@interface TouchableHaptics : NSObject {
     dispatch_queue_t _queue;
     CHHapticEngine *_engine;
     id<CHHapticAdvancedPatternPlayer> _player;
@@ -18,11 +18,11 @@
 - (void)enqueue:(ss_haptic_output)output;
 @end
 
-@implementation NitenHaptics
+@implementation TouchableHaptics
 - (instancetype)init {
     if ((self = [super init])) {
         _supported = CHHapticEngine.capabilitiesForHardware.supportsHaptics;
-        _queue = dispatch_queue_create("Nitenphone haptics",
+        _queue = dispatch_queue_create("Touchable haptics",
             dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INTERACTIVE, 0));
         NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
         [center addObserverForName:UIApplicationWillResignActiveNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
@@ -72,9 +72,9 @@
         if (!_engine) { [self reportError:error operation:"create engine"]; return NO; }
         _engine.playsHapticsOnly = YES;
         _engine.autoShutdownEnabled = YES;
-        __weak NitenHaptics *weakSelf = self;
+        __weak TouchableHaptics *weakSelf = self;
         _engine.stoppedHandler = ^(CHHapticEngineStoppedReason reason) {
-            NitenHaptics *owner = weakSelf;
+            TouchableHaptics *owner = weakSelf;
             if (!owner) return;
             dispatch_async(owner->_queue, ^{
                 owner->_player = nil;
@@ -84,7 +84,7 @@
             });
         };
         _engine.resetHandler = ^{
-            NitenHaptics *owner = weakSelf;
+            TouchableHaptics *owner = weakSelf;
             if (!owner) return;
             dispatch_async(owner->_queue, ^{
                 owner->_player = nil;
@@ -156,7 +156,7 @@
 
 /* GameController supplies a Core Haptics engine for the active controller.
  * The same mono Switch mix goes to each supported actuator. */
-@interface NitenControllerHaptics : NSObject {
+@interface TouchableControllerHaptics : NSObject {
     dispatch_queue_t _queue;
     GCController *_controller;
     CHHapticEngine *_engine;
@@ -176,19 +176,19 @@ static GCController *activeHapticController(void) {
     return nil;
 }
 
-@implementation NitenControllerHaptics
+@implementation TouchableControllerHaptics
 - (instancetype)init {
     if ((self = [super init])) {
-        _queue = dispatch_queue_create("Nitenphone controller haptics",
+        _queue = dispatch_queue_create("Touchable controller haptics",
             dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INTERACTIVE, 0));
         NSMutableArray<id<NSObject>> *observers = [NSMutableArray array];
         NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
-        __weak NitenControllerHaptics *weakSelf = self;
+        __weak TouchableControllerHaptics *weakSelf = self;
         for (NSString *name in @[GCControllerDidConnectNotification, GCControllerDidDisconnectNotification,
                                  GCControllerDidBecomeCurrentNotification, GCControllerDidStopBeingCurrentNotification]) {
             id<NSObject> token = [center addObserverForName:name object:nil queue:nil usingBlock:^(NSNotification *note) {
                 (void)note;
-                NitenControllerHaptics *owner = weakSelf;
+                TouchableControllerHaptics *owner = weakSelf;
                 if (!owner) return;
                 dispatch_async(owner->_queue, ^{
                     [owner refreshController];
@@ -258,10 +258,10 @@ static GCController *activeHapticController(void) {
             return NO;
         }
         _engine.autoShutdownEnabled = YES;
-        __weak NitenControllerHaptics *weakSelf = self;
+        __weak TouchableControllerHaptics *weakSelf = self;
         __weak CHHapticEngine *weakEngine = _engine;
         _engine.stoppedHandler = ^(CHHapticEngineStoppedReason reason) {
-            NitenControllerHaptics *owner = weakSelf;
+            TouchableControllerHaptics *owner = weakSelf;
             CHHapticEngine *engine = weakEngine;
             if (!owner || !engine) return;
             dispatch_async(owner->_queue, ^{
@@ -273,7 +273,7 @@ static GCController *activeHapticController(void) {
             });
         };
         _engine.resetHandler = ^{
-            NitenControllerHaptics *owner = weakSelf;
+            TouchableControllerHaptics *owner = weakSelf;
             CHHapticEngine *engine = weakEngine;
             if (!owner || !engine) return;
             dispatch_async(owner->_queue, ^{
@@ -347,17 +347,17 @@ static GCController *activeHapticController(void) {
 
 static int controllerHapticsEnabled;
 
-static NitenHaptics *sharedHaptics(void) {
-    static NitenHaptics *instance;
+static TouchableHaptics *sharedHaptics(void) {
+    static TouchableHaptics *instance;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{ instance = [NitenHaptics new]; });
+    dispatch_once(&once, ^{ instance = [TouchableHaptics new]; });
     return instance;
 }
-static NitenControllerHaptics *sharedControllerHaptics(void) {
+static TouchableControllerHaptics *sharedControllerHaptics(void) {
     if (!controllerHapticsEnabled) return nil;
-    static NitenControllerHaptics *instance;
+    static TouchableControllerHaptics *instance;
     static dispatch_once_t once;
-    dispatch_once(&once, ^{ instance = [NitenControllerHaptics new]; });
+    dispatch_once(&once, ^{ instance = [TouchableControllerHaptics new]; });
     return instance;
 }
 void ss_haptics_platform_apply(ss_haptic_output output) {
@@ -365,8 +365,8 @@ void ss_haptics_platform_apply(ss_haptic_output output) {
     [sharedControllerHaptics() enqueue:output];
 }
 void ss_haptics_ios_init(void) {
-    NitenHaptics *haptics = sharedHaptics();
-    controllerHapticsEnabled = [[NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenControllerHaptics"] boolValue];
+    TouchableHaptics *haptics = sharedHaptics();
+    controllerHapticsEnabled = [[NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableControllerHaptics"] boolValue];
     ss_haptics_configure(haptics.supported || controllerHapticsEnabled);
     ss_haptics_suspend_for(SS_HAPTICS_INACTIVE, UIApplication.sharedApplication.applicationState != UIApplicationStateActive);
     if (controllerHapticsEnabled) (void)sharedControllerHaptics();

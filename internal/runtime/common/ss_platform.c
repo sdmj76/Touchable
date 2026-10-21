@@ -110,7 +110,7 @@ int dm_opmode(void) {
     return mode;
 }
 /* Performance mode for nn::oe::GetPerformanceMode: 0 normal, 1 boost (the docked value).
-   A game adapter can set it in niten_game_install(). */
+   A game adapter can set it in touchable_game_install(). */
 int ss_performance_mode;
 void dm_focus_set(int value) {
     if (atomic_exchange(&focus, value) == value) return;

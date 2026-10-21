@@ -51,7 +51,7 @@ Default protected files:
 - Test reports, logs, screenshots, and compatibility links.
 - Upstream edits and pinned patches.
 
-Do not remove a complete `.nitenphone/build/` or `.nitenphone/work/` directory.
+Do not remove a complete `.touchable/build/` or `.touchable/work/` directory.
 Do not follow symbolic links during cleanup.
 Stop if a build or game process is using a cleanup target.
 
@@ -65,8 +65,8 @@ Use these sources for reconstruction:
 | Target | Reconstruction source |
 | --- | --- |
 | Xcode `Intermediates.noindex`, module caches, SDK caches, and compilation caches | The generated project, source, active modules, shader libraries, and installed Xcode |
-| `.nitenphone/build/games/<id>/host/obj/` | `bash internal/tools/build_host.sh --game <id>` |
-| `.nitenphone/build/tooling/cache/dm/verify/*.usr.json` | `structck.py` regenerates disassembly caches from the input module and LLVM version |
+| `.touchable/build/games/<id>/host/obj/` | `bash internal/tools/build_host.sh --game <id>` |
+| `.touchable/build/tooling/cache/dm/verify/*.usr.json` | `structck.py` regenerates disassembly caches from the input module and LLVM version |
 | The pinned .NET SDK download archive | `internal/tools/bootstrap_shader.sh` records the download URL and SHA-512 |
 | A transfer package's expanded staging directory | Its retained ZIP, after a full file-set and SHA-256 comparison |
 | Source `__pycache__/` directories | The source files and the local Python interpreter |
@@ -85,8 +85,8 @@ Run the configuration checks for both games.
 
 ## First maintenance: 2026-10-16–17
 
-The [Silksong maintenance report](../../.nitenphone/work/silksong/reports/workspace-cleanup-20261016/README.md) contains the shared inventory and deletion record.
-The [Rhythm Heaven maintenance report](../../.nitenphone/work/rhythm-heaven/reports/workspace-cleanup-20261016/README.md) records that game's scope.
+The [Silksong maintenance report](../../.touchable/work/silksong/reports/workspace-cleanup-20261016/README.md) contains the shared inventory and deletion record.
+The [Rhythm Heaven maintenance report](../../.touchable/work/rhythm-heaven/reports/workspace-cleanup-20261016/README.md) records that game's scope.
 The reports include the measured directory reduction and validation limits.
 No Mac or iPhone gameplay test is part of this maintenance task.
 
@@ -106,8 +106,8 @@ It does not permit removal of original game files, keys, saves, active modules, 
 
 | Game | Latest local app | Latest IPA |
 | --- | --- | --- |
-| Silksong | Build 8, `.nitenphone/build/games/silksong/ios/Build/Products/Debug-iphoneos/Silksong.app` | `.nitenphone/build/games/silksong/ipa/Silksong-1.0.30000-build8.ipa` |
-| Rhythm Heaven | Build 15, `.nitenphone/build/games/rhythm-heaven/ios/Build/Products/Debug-iphoneos/RhythmHeaven.app` | `.nitenphone/build/games/rhythm-heaven/ipa/RhythmHeaven-build15-extra-menu-touch.ipa` |
+| Silksong | Build 8, `.touchable/build/games/silksong/ios/Build/Products/Debug-iphoneos/Silksong.app` | `.touchable/build/games/silksong/ipa/Silksong-1.0.30000-build8.ipa` |
+| Rhythm Heaven | Build 15, `.touchable/build/games/rhythm-heaven/ios/Build/Products/Debug-iphoneos/RhythmHeaven.app` | `.touchable/build/games/rhythm-heaven/ipa/RhythmHeaven-build15-extra-menu-touch.ipa` |
 
 The Silksong app came from `ios-pool-tracking`.
 It includes the later shared fixes and is unsigned.
@@ -124,12 +124,12 @@ Their package reports and checksums remain under the Rhythm Heaven log archive.
 Old artifact paths in history files describe the files used at that time.
 They do not indicate that those artifacts are still present.
 
-The current CPU probe remains in `.nitenphone/build/probes/ios/`.
+The current CPU probe remains in `.touchable/build/probes/ios/`.
 Legacy app aliases now point to current outputs where an equivalent exists.
 The obsolete icon-check alias was removed.
 
-See [the shared retention report](../../.nitenphone/work/silksong/reports/build-retention-20261017/README.md).
-See [the Rhythm Heaven retention record](../../.nitenphone/work/rhythm-heaven/reports/build-retention-20261017/README.md).
+See [the shared retention report](../../.touchable/work/silksong/reports/build-retention-20261017/README.md).
+See [the Rhythm Heaven retention record](../../.touchable/work/rhythm-heaven/reports/build-retention-20261017/README.md).
 
 This later retention task retired 43 output targets, including 20 old IPAs.
 Project directory usage fell from 170.62 GiB to 40.06 GiB.

@@ -4,6 +4,7 @@
 #include "ss_pointer.h"
 #include "ss_touch.h"
 #include <math.h>
+#include <time.h>
 #include <unistd.h>
 
 static uint8_t *base;
@@ -36,9 +37,21 @@ static void *pointer_file(void *argument) {
     uint64_t held = 0, held_token = 0;
     const char *snapshot = getenv("RH_POINTER_SNAPSHOT"), *shots = getenv("RH_POINTER_SHOTS");
     unsigned ticks = 0;
+    int controls = -1, controls_mode = -1;
     void ss_input_set(uint64_t, int32_t, int32_t);
     for (;;) {
         ss_pointer_frame active;
+        if (trace) {   /* the phone's touch control decision, with the time of each change */
+            int now_controls = ss_pointer_controls(), now_mode = ss_pointer_read(&active) ? active.mode : -1;
+            if (now_controls != controls || now_mode != controls_mode) {
+                static const char *const names[] = {"show", "hide", "keep"};
+                struct timespec now;
+                clock_gettime(CLOCK_MONOTONIC, &now);
+                LOG("CONTROLS %lld.%03ld %s (frame mode %d)", (long long)now.tv_sec, now.tv_nsec / 1000000,
+                    names[now_controls], now_mode);
+                controls = now_controls; controls_mode = now_mode;
+            }
+        }
         if (held && (!ss_pointer_read(&active) || active.token != held_token)) { ss_input_set(0, 0, 0); held = 0; }
         if (snapshot && ++ticks % 20 == 0) {
             ss_pointer_frame frame;

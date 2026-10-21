@@ -46,9 +46,9 @@ class WorkspaceTests(unittest.TestCase):
                           "input_file", "save_dir", "temp_dir", "ipa_dir", "logs_dir", "shader_chain_header"):
             with self.subTest(attribute=attribute):
                 self.assertNotEqual(getattr(first, attribute), getattr(second, attribute))
-        self.assertEqual(first.base_dir, self.root / ".nitenphone/work/first-game/base")
-        self.assertEqual(first.save_dir, self.root / ".nitenphone/saves/first-game/first-game")
-        self.assertEqual(first.project_dir, self.root / ".nitenphone/build/games/first-game/ios-project")
+        self.assertEqual(first.base_dir, self.root / ".touchable/work/first-game/base")
+        self.assertEqual(first.save_dir, self.root / ".touchable/saves/first-game/first-game")
+        self.assertEqual(first.project_dir, self.root / ".touchable/build/games/first-game/ios-project")
         self.assertEqual(first.ios_dir, self.root / "games/first-game/ios")
         self.assertNotEqual(first.bundle_id, second.bundle_id)
         self.assertNotEqual(first.product_name, second.product_name)

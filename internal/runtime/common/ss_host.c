@@ -2,8 +2,8 @@
 #include "dm.h"
 #include "ss_indirect_branch.h"
 #include "ss_display.h"
-#include "niten_game.h"
-#include "niten_game_config.h"
+#include "touchable_game.h"
+#include "touchable_game_config.h"
 #include "ss_haptics.h"
 #include <errno.h>
 #include <unistd.h>
@@ -52,7 +52,7 @@ static void install_traps(const char *directory) {
     }
     int error = count ? ss_indirect_install(sites, count, g_key18) : 0;
     if (error) die("Cannot install instruction bridge: %s", strerror(error));
-    LOG("%s instruction bridge: %zu sites", NITEN_GAME_ID, count);
+    LOG("%s instruction bridge: %zu sites", TOUCHABLE_GAME_ID, count);
 }
 
 static void call0(const char *name) {
@@ -70,9 +70,9 @@ int ss_host_run(const char *directory) {
     g_flag.bootprof = 1;
     setenv("DM_APP_POOL_ADD_MB", "0", 0);
     ss_crash_install();
-    const char *names[] = NITEN_GAME_MODULES;
+    const char *names[] = TOUCHABLE_GAME_MODULES;
     load_modules(directory, names, sizeof(names) / sizeof(names[0]));
-    niten_game_install();
+    touchable_game_install();
     install_traps(directory);
     stubs_report();
     guest_thread_init();
@@ -85,11 +85,11 @@ int ss_host_run(const char *directory) {
     call0("nninitStartup");
     call0("_init_libc2");
     run_module_inits();
-    static char *arguments[] = {NITEN_GAME_PRODUCT, NULL};
+    static char *arguments[] = {TOUCHABLE_GAME_PRODUCT, NULL};
     ((void (*)(int))required("_ZN2nn2os11SetHostArgcEi"))(1);
     ((void (*)(char **))required("_ZN2nn2os11SetHostArgvEPPc"))(arguments);
     call0("nnMain");
-    LOG("%s nnMain returned", NITEN_GAME_ID);
+    LOG("%s nnMain returned", TOUCHABLE_GAME_ID);
     return 0;
 }
 
@@ -115,7 +115,7 @@ static void *input_file(void *argument) {
     }
 }
 int main(int argc, char **argv) {
-    if (argc != 2) { fprintf(stderr, "Usage: nitenphone-host MODULE_DIRECTORY\n"); return 2; }
+    if (argc != 2) { fprintf(stderr, "Usage: touchable-host MODULE_DIRECTORY\n"); return 2; }
     const char *view = getenv("SS_VIEW_SIZE");
     double width, height;
     if (view && sscanf(view, "%lfx%lf", &width, &height) == 2) ss_display_set_view(width, height);

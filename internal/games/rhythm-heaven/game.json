@@ -49,7 +49,7 @@
     "platform/ios/Haptics.m"
   ],
   "compile_defines": [
-    "NITENPHONE_SWITCH_RUNTIME",
+    "TOUCHABLE_SWITCH_RUNTIME",
     "SS_SHADER_KEY_CODE",
     "SS_GUEST_LARGE_HEAP",
     "SS_NVN_LOWER_LEFT_ORIGIN"

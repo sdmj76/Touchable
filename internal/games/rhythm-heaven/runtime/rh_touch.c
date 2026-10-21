@@ -71,6 +71,12 @@ static rh_touch_hint hint_of(const rh_touch_state *state) {
     return dpad;
 }
 
+int rh_touch_loading(const rh_touch_state *state, const char *path) {
+    const char *graph = strstr(path, ":/graph/");
+    if (!graph) return 0;
+    return !(state->active && !strncmp(graph + 8, "scene/", 6));
+}
+
 int rh_touch_path(rh_touch_state *state, const char *path, rh_touch_hint *out) {
     const char *graph = strstr(path, ":/graph/");
     if (!graph) return 0;

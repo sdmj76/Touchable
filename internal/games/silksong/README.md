@@ -1,5 +1,144 @@
 **Silksong Switch → iPhone / iPad port workspace**
 
+## 2026-10-20: Build 28 installed on the iPhone and the iPad mini (wider view removed)
+
+User request: "undo wider view and install". Build 28 is build 27 without the camera zoom; the map changes stay. IPA: `IPA/silksong/Silksong-build28-20261020-220739-0b1591.ipa`. Silksong was closed on both devices.
+
+- iPhone: backup `.touchable/saves/silksong/phone-before-install-20261020-221047-dea46c/`. The iPhone reports build 28. All 14 save files match the backup.
+- iPad mini: the first install failed because the Mac disk was full. After the user approved the deletion of 19 old Silksong Xcode run folders (126.8 GB; see `.touchable/work/silksong/reports/disk-cleanup-20261020/`), the install passed. Backup `.touchable/saves/silksong/phone-before-install-20261020-222025-af9d8a/`. The iPad reports build 28. All 6 save files match the backup.
+- The game was not started after the installs.
+
+## 2026-10-20: Camera zoom for the touch layout (removed; only build 27 had it)
+
+Removed later on 2026-10-20 at the user's request ("undo wider view and install"): the source is back to its state before the zoom, and build 28 has no zoom. The zoom source is kept as `zoom-source.patch` in the camera zoom record.
+
+User request: keep the controller layout and scale the game view, so that the distance from the D-pad center to the face-button center shows the horizontal range of the original 16:9 picture. The vertical range scales by the same factor.
+
+- `ss_display_set_control_span()` (shared `ss_display.c`) stores the zoom r = (16/9) × view height / span. `App.m` passes the span of the Switch layout. The Mac host reads `SS_VIEW_SPAN`. iPhone 16 Pro Max: span 636 points, r 1.2299. iPad mini: span 894.6 points, r 1.4785.
+- `runtime/ss_display.c` hooks `ForceCameraAspect.Update` (field of view so that tan(F/2) = r·tan(F0/2), 24° → 29.30° on the iPhone) and `CameraController.LateUpdate` (the camera stays inside the scene with the zoomed half view; a scene smaller than the view is centered). Only main `fc9ea4cc`, and only when r ≠ 1. 16:9 and Rhythm Heaven do not change.
+- The world texture grows to min(720, 576·r) reference lines: iPhone 1884×868, iPad 1644×1080.
+- Tests: `test_display.c`, App.m syntax check, and Mac host runs at the iPhone and iPad aspects: measured scale, room edges and a room transition, HUD, inventory, pause, and frame time (p50 8.33 ms at 120 Hz). No device test.
+- Limits: a room smaller than the zoomed view shows dark area outside the room (iPad: about 2.3 units above and below a 20-unit corridor). Lock areas and screen-edge effects keep their 16:9 values. The phone GPU cost of the larger world texture is not measured.
+
+For details, see [the camera zoom record](../../../.touchable/work/silksong/reports/camera-zoom-20261020/README.md).
+
+## 2026-10-20: Build 27 installed on the iPhone and the iPad mini
+
+Build 27 adds the camera zoom (the strip between the D-pad and ABXY centers shows the 16:9 width; see the camera zoom entry) and the map changes (drag on the marker page; Y and A at the left edge, X and B at the right edge). IPA: `IPA/silksong/Silksong-build27-20261020-214239-623bef.ipa`. Silksong was running on both devices when the build finished. A watcher installed each device only after the game was closed there. Backups: iPad `.touchable/saves/silksong/phone-before-install-20261020-214639-eaf93a/`, iPhone `.touchable/saves/silksong/phone-before-install-20261020-215155-eabc69/`. Both devices report build 27. The save files match the backups (iPad 6 files, iPhone 14 files). The game was not started after the installs. The phone GPU cost of the zoom is not yet measured.
+
+## 2026-10-20: Build 26 installed on the iPhone
+
+Build 26 adds the map view buttons below (A at the left edge, X and B at the right edge). IPA: `IPA/silksong/Silksong-build26-20261020-203824-cc3d43.ipa`. Silksong was not running before the install. The launcher backed up the saves to `.touchable/saves/silksong/phone-before-install-20261020-204127-e230b6/`. The iPhone reports build 26, and all 14 save files match that backup. The game was not started after the install. The iPad mini is not updated.
+
+## 2026-10-20: Map view shows only A, X, and B (source change, no build)
+
+User request: "in map view, only show A button at bottom left, X and B at bottom right".
+
+- `internal/platform/ios/App.m`: the zoomed map hides the other controls. Y above A at the left edge, X above B at the right edge, 76 points apart on a phone.
+- `ss_touch_ui.c`: a drag also moves the map on the marker placement page (after A). The cursor stays in the center. The pad toggle shows the full pad. A drag moves the map.
+- iOS Simulator test passed. See [the map buttons record](../../../.touchable/work/silksong/reports/map-buttons-20261020/README.md).
+
+## 2026-10-20: Build 25 installed on the iPhone
+
+Build 25 contains the next entry: crest carousel, side arrows, map drag, cutscene controls, room transitions, and capsule shoulders. IPA: `IPA/silksong/Silksong-build25-20261020-201614-40a7ca.ipa`. Silksong was running on the iPhone when the build started, so the install waited until it was closed. The launcher backed up the saves to `.touchable/saves/silksong/phone-before-install-20261020-201923-a28287/`. The iPhone reports build 25, and all 14 save files match that backup. The game was not started after the install. The iPad mini is not updated.
+
+## 2026-10-20: Crest carousel, side arrows, map drag, cutscene controls, room transitions, capsule shoulders (source change, no build)
+
+- Change Crest takes taps: a side crest or a scroll arrow moves the carousel one step, and the center crest selects it.
+- The large ◇ arrows at the sides of the inventory change the pane (L and R).
+- A drag moves the zoomed map through the game's `GameMap.UpdateMapPosition`. The pad stays on the map.
+- A cutscene hides the pad. It shows Skip (A, only when the game allows a skip) in the place of +, and the pad toggle. The new pointer mode is `SS_POINTER_CUTSCENE`.
+- Room transitions keep the pad. The title-to-game load and quit to title still hide it.
+- ZL, L, R, and ZR are capsules (74 × 46 points on a phone, 88 × 55 on a tablet). A very short iPad window keeps circles. On the iPhone 16 Pro the pad toggle now sits next to +.
+- Tests: Mac host at 16:9, iOS Simulator harness, layout and pointer C tests, Python tests, and a Rhythm Heaven host build. The iPhone and iPad aspect host runs were stopped by the user.
+
+For details, see [the record](../../../.touchable/work/silksong/reports/cutscene-capsule-20261020/README.md).
+
+## 2026-10-20: Build 24 installed on the iPhone
+
+Build 24 contains the entries below down to the save-select and drag-scroll changes: the slide that keeps the first button pressed, the D-pad press light, the two-tap save select, and inventory drag scrolling. IPA: `IPA/silksong/Silksong-build24-20261020-193450-ed25b2.ipa`. The launcher backed up the iPhone saves to `.touchable/saves/silksong/phone-before-install-20261020-193734-fb615a/`. The iPhone reports build 24. After the install, all 14 save files match that backup. The game was not started after the install. The iPad mini is not updated.
+
+## 2026-10-20: Face-button slide keeps the first button pressed (source change, no build)
+
+User request: "when sliding, the first pressed key should be always pressed unless finger leave screen."
+
+- `internal/platform/ios/App.m` (`PadButton`): the button where the touch starts stays pressed until the finger lifts. A slide onto another face button also presses that button, and a slide onward releases only that second button. A slide back leaves only the first button.
+- The first slide no longer releases the first button for a moment while UIKit's touch tracking ends.
+- Real-touch iOS Simulator test: B → Y → X → B gives B, B+Y, B+X, B, and none at the lift.
+
+For details, see [the slide hold record](../../../.touchable/work/silksong/reports/slide-hold-first-20261020/README.md).
+
+## 2026-10-20: D-pad press light fitted to the glass arm (source change, no build)
+
+User request: "the press effect of D-pad is not exactly match. check and fix it".
+
+- Fault: the lit arm was a separate shape with a white glow outside the glass edge, and a hard line at the center.
+- `internal/platform/ios/App.m` (`PadDpadMarks`): the light is clipped to the glass bar, so it has the arm outline. The outer glow is removed. The light fades in from the other bar. The center stays unlit, and a diagonal lights two clean arms. The fill (white 0.2) and the face-button press effect do not change.
+- Real-touch iOS Simulator test (iPhone 17 Pro Max): right, up-right, and up give the correct inputs, and no light falls outside the arm.
+
+For details, see [the D-pad press record](../../../.touchable/work/silksong/reports/dpad-press-match-20261020/README.md).
+
+## 2026-10-20: Two taps on the save select, and drag scrolling in the inventory (source change, no build)
+
+User requests: "change save choosing to double confirm" and "in inventory/tasks or similar page, touch can't drag to scroll, Fix it".
+
+- `runtime/ss_touch_ui.c`: on the save select (menu state 6), the first tap on an item only selects it. A second tap on the same item clicks it. This applies to the slots, the restore points, the clear button, and Back.
+- A vertical drag in an inventory pane moves the pane list with the finger. The adapter sets the position of the game's `ScrollView`; the game clamps it and updates the scroll arrows. The quest list and the item grids (equipment, tools, journal) have a list. The map has none.
+- An inventory tap now acts on the release, and only when the touch does not drag.
+- Mac host tests at 16:9 and at the iPhone and iPad aspects: the save select needs two taps, and the journal list scrolls, takes a tap, and stops at the top.
+- Not tested: a drag that starts on the selected item (the app holds A there), the completed-quest view, shops, and a device.
+
+For details, see [the two-tap and scroll record](../../../.touchable/work/silksong/reports/touch-confirm-scroll-20261020/README.md).
+
+## 2026-10-20: Slide between A, B, X, and Y (source change, no build)
+
+User request: "Make ABXY buttons able to slide. example: when I am pressing B while I want to click Y for attack. I can slide my finger to Y without leaving screen, then Y activated."
+
+- `App.m` (`PadButton`): a finger on A, B, X, or Y can slide onto another face button. The press moves when the finger enters the touch area of the new button. The finger never holds two buttons. (Changed later on 2026-10-20: the first button now stays pressed. See the entry above.) A button that another finger holds does not take the press. Other buttons and the D-pad do not slide.
+- The slid-to button shows a drawn white fill (0.2, as the lit D-pad arm). The system glass press look shows only for real touches, so it cannot show there. The first button drops its press look when the finger leaves it.
+- Real-touch iOS Simulator tests (iPhone 17 Pro Max): B → Y, A → B → X, B → Y → B, a tap, a slide with the D-pad held, and a slide onto a button that another finger holds gave the expected input. The Rhythm Heaven layout is unchanged.
+- Not tested: a device and the iPad simulator.
+
+For details, see [the slide record](../../../.touchable/work/silksong/reports/slide-face-buttons-20261020/README.md).
+
+## 2026-10-20: −, +, and the pad toggle at the side edges (source change, no build)
+
+User request: "Move + and - and controller key to most left or right".
+
+- `TouchLayout.h`: on a phone, − (and Back) and + move to the side edges of the safe area: 12 points outward. On a tablet they stay 8 points from the edges.
+- The pad toggle moves from the + row to the right edge, below +. On a phone 375 points high there is no space above ZR, so it stays next to +.
+- In a small iPad window (phone layout), − and + now stay below the iPadOS window controls.
+- `test_touch_layout.c` passes at 11 sizes. The iOS Simulator harness with the real `App.m` shows the new positions on the iPhone 17 Pro Max and in an iPad mini window. The Rhythm Heaven layout gave identical iPhone screenshots.
+- Not tested: the full-screen iPad layout in a simulator (the simulator stays in portrait), and a device.
+
+For details, see [the edge buttons record](../../../.touchable/work/silksong/reports/edge-menu-buttons-20261020/README.md).
+
+## 2026-10-20: Touch controls hidden on loading screens (build 22)
+
+User request: "Make virtual controller only appears when needed. Sometimes it appears when loading screen. Fix it for both game".
+
+- Cause: the adapter published controller mode during loads, so the app showed the pad.
+- `runtime/ss_touch_ui.c` now publishes the new pointer mode `SS_POINTER_WAIT` in GameManager states 0, 2, 3, and 6, during the Unity boot, and on the title screen when a hero object exists (a save is loading). A title or pause menu without a selected item after the 90-frame grace also publishes `WAIT`, for up to 8 s. This covers quit to title.
+- The app hides the pad, the back button, and the pad toggle for a `WAIT` frame, and for up to 30 s after the last one (load hitches). Cutscenes keep the pad.
+- Mac host tests at the iPhone and iPad aspects: the pad is hidden from boot to the title menu, from the save tap to gameplay, and during quit to title. It shows on the title menu, in gameplay, and in the pause menu. An iOS Simulator harness with the real `App.m` confirmed the hidden controls.
+- Build 22 (launcher build) is installed on the iPhone and the iPad mini. The saves were backed up before the install and not restored. IPA: `IPA/silksong/Silksong-build22-20261020-134449-60dce2.ipa` (SHA-256 `d08a5ed3cc4129d2ffc88ae4475e901a46d4edf42376762ccc4641eac5bc6dc1`). The build 21 IPA is archived to `.touchable/archive/ipa/silksong/20261020-134449-60dce2/`.
+- iPhone test (the user played): the log shows the controls hidden from boot to the title menu, in two save loads, in four room transitions, and in quit to title. They showed again in gameplay and on title menu items. Menus kept their touch-menu controls.
+- Not tested: fast travel, deaths, cutscenes, and the iPad mini.
+
+For details, see [the loading controls record](../../../.touchable/work/silksong/reports/loading-controls-20261020/README.md).
+
+## 2026-10-20: PC save imported into slots 2 and 3 (save data only, no build)
+
+User request: install an all-unlocked PC (Steam) save on both devices.
+
+- A PC save is a .NET BinaryFormatter string of Base64 AES-256-ECB data. The plain data is the same JSON that the Switch game uses. The scripts in the record decode it.
+- PC slot 1 (normal, 101%, 16 h 51 min, version 1.0.28561) is now slot 2. PC slot 2 (Steel Soul, 99%, 24 h 10 min, version 1.0.28324) is now slot 3. Only `profileID` changed. `shared.dat` keeps all device keys and adds the PC endings A to I.
+- Mac host tests on a save copy: the save select shows both slots, both slots load into gameplay, and the inventory values match. Save and quit converts slot 2 to version 1.0.30000, and the reload passes.
+- The files were copied into `Documents/Saves/Silksong/` of build 21 on the iPhone and the iPad mini. Silksong was not running. A read-back matched. Slot 1 and all other files are unchanged. Backups are in `.touchable/saves/silksong/<device>-before-pc-save-20261020-133856/`.
+- After the build 22 install, the iPhone saves show that slots 2 and 3 were played and saved. The game converted them to version 1.0.30000. The iPad mini saves are unchanged.
+
+For details, see [the PC save import record](../../../.touchable/work/silksong/reports/pc-save-import-20261020/README.md).
+
 ## 2026-10-19: Builds 20 and 21, glass press effect aligned with Apple
 
 Build 21: The user did not like the new D-pad effect in build 20. The user asked for the previous highlight at a lower brightness. The D-pad uses the build 17–19 design again: two glass bars and a drawn white arm highlight (fill plus soft outer glow). The brightness is lower: white fill 0.32 → 0.2, outer glow 0.9 → 0.5. On a dark background, the brightness of a pressed arm decreases from 153 to 106 (49 at rest). The buttons continue to use the build 20 system press effect. Build 20 was not installed.
@@ -16,7 +155,7 @@ Limits: Two-finger simultaneous presses were not tested. The test was only on th
 
 IPA: `IPA/silksong/Silksong-build21-20261019-111904-af2379.ipa` (SHA-256 `1c8ce91e…6b503`). The build 20 IPA is archived. One Silksong install occurred at 09:27–09:29 (this session did not start it; build 20 was the latest at that time; log `install-20261019-092648-560f94`; no device was recorded). At 11:23, the iPhone was not available for the build 21 install (locked or not connected). Thus there was no install and no backup. The iPad install is still necessary.
 
-For details, see [the glass press record](../../../.nitenphone/work/silksong/reports/glass-press-20261019/README.md).
+For details, see [the glass press record](../../../.touchable/work/silksong/reports/glass-press-20261019/README.md).
 
 ## 2026-10-19: Build 19, 120 Hz, Game Mode, and render pass merge
 
@@ -39,7 +178,7 @@ Limits:
 - Rhythm Heaven stays at 60 fps (its game time is calculated from frames). It gets Game Mode only after a new build.
 
 IPA: `IPA/silksong/Silksong-build19-20261019-025850-1743a7.ipa` (SHA-256 `45ed1d7b…059d32`). The iPhone installed build 19 at 08:49. During the iPad install, the connection stopped. After that, the device was not available. The iPad must still install build 19.
-For details, see [the 120 Hz record](../../../.nitenphone/work/silksong/reports/promotion-120hz-20261019/README.md).
+For details, see [the 120 Hz record](../../../.touchable/work/silksong/reports/promotion-120hz-20261019/README.md).
 
 ## 2026-10-18: Builds 17 and 18, D-pad, Liquid Glass, and automatic hide for physical controllers
 
@@ -68,11 +207,11 @@ Limits:
 - Confirm the size of the device window control area in the `window top` log line.
 - After a physical controller hides the controls, the first touch only shows the controls.
 - The build 18 D-pad size was only checked in the Simulator. The feel on a device must be confirmed.
-- At 13:28, the Rhythm Heaven session changed the shared `App.m` (the rhythm layout uses Liquid Glass; the Switch layout glass code moved to `addGlassLayer`). Build 18 does not include this change. The Rhythm Heaven session checked the Switch layout in the Simulator with the changed `App.m` (SHA-256 `f6ece98b…942a79`) and the test app from this record: game screen, D-pad and button presses, menu mode, hide for physical controllers, and show after a touch and after a disconnect. The logs are identical line by line to the build 17 and 18 results. The D-pad is 168 pt (phone) and 202 pt (iPad). The evidence is in the Rhythm Heaven record (`.nitenphone/work/rhythm-heaven/reports/liquid-glass-20261018/silksong-regression/`). The next Silksong build will include this change. It is not tested on a device yet.
+- At 13:28, the Rhythm Heaven session changed the shared `App.m` (the rhythm layout uses Liquid Glass; the Switch layout glass code moved to `addGlassLayer`). Build 18 does not include this change. The Rhythm Heaven session checked the Switch layout in the Simulator with the changed `App.m` (SHA-256 `f6ece98b…942a79`) and the test app from this record: game screen, D-pad and button presses, menu mode, hide for physical controllers, and show after a touch and after a disconnect. The logs are identical line by line to the build 17 and 18 results. The D-pad is 168 pt (phone) and 202 pt (iPad). The evidence is in the Rhythm Heaven record (`.touchable/work/rhythm-heaven/reports/liquid-glass-20261018/silksong-regression/`). The next Silksong build will include this change. It is not tested on a device yet.
 
-IPA: `IPA/silksong/Silksong-build18-20261018-123447-fd4781.ipa` (SHA-256 `d74ea875…cb9f50`). The build 17 IPA is archived to `.nitenphone/archive/ipa/silksong/20261018-123447-fd4781/`. The build 16 IPA is in `.nitenphone/archive/ipa/silksong/20261018-121557-652127/`.
+IPA: `IPA/silksong/Silksong-build18-20261018-123447-fd4781.ipa` (SHA-256 `d74ea875…cb9f50`). The build 17 IPA is archived to `.touchable/archive/ipa/silksong/20261018-123447-fd4781/`. The build 16 IPA is in `.touchable/archive/ipa/silksong/20261018-121557-652127/`.
 The iPhone installed build 17 at 12:19. The user confirmed that build 17 works correctly on the iPhone. The iPad mini (13:06) and the iPhone (13:28) both installed build 18. The app was not running before the install. The install tool backed up the save data first. The app was not started.
-For details, see [the virtual controller record](../../../.nitenphone/work/silksong/reports/touch-controls-20261018/README.md).
+For details, see [the virtual controller record](../../../.touchable/work/silksong/reports/touch-controls-20261018/README.md).
 
 ## 2026-10-18: Builds 14, 15, and 16, menu and inventory touch
 
@@ -101,10 +240,10 @@ Limits:
 - When the map is zoomed in, use the controller. In long lists, use the controller to scroll to items outside the screen.
 - Shops, yes/no confirmation boxes, fast travel, the quest board, and display boards do not accept touch yet. This save did not get to these screens.
 
-IPA: `IPA/silksong/Silksong-build16-20261018-083911-334e34.ipa` (SHA-256 `6884d7b7…3b3ba2`). The build 15 IPA is archived to `.nitenphone/archive/ipa/silksong/20261018-083911-334e34/`. The build 14 IPA is in `.nitenphone/archive/ipa/silksong/20261018-045801-ed4b0e/`.
+IPA: `IPA/silksong/Silksong-build16-20261018-083911-334e34.ipa` (SHA-256 `6884d7b7…3b3ba2`). The build 15 IPA is archived to `.touchable/archive/ipa/silksong/20261018-083911-334e34/`. The build 14 IPA is in `.touchable/archive/ipa/silksong/20261018-045801-ed4b0e/`.
 The iPad mini (08:46) and the iPhone (08:50) both installed build 16. The app was not running before the install. The install tool backed up the save data first. The app was not started. Touch mode was not tested on a device yet.
 2026-10-19: The user tried it on the device and confirmed that menu and inventory touch work correctly ("Menu touch is done, all good").
-For details, see [the touch menu record](../../../.nitenphone/work/silksong/reports/touch-ui-20261018/README.md).
+For details, see [the touch menu record](../../../.touchable/work/silksong/reports/touch-ui-20261018/README.md).
 
 ## 2026-10-18: Builds 12 and 13, virtual controller layout per device
 
@@ -151,7 +290,7 @@ Limits:
 
 IPA: `IPA/silksong/Silksong-build13-20261018-020141-5eee3a.ipa`.
 The iPad and the iPhone both installed build 13.
-For details, see [the virtual controller record](../../../.nitenphone/work/silksong/reports/touch-layout-20261018/README.md).
+For details, see [the virtual controller record](../../../.touchable/work/silksong/reports/touch-layout-20261018/README.md).
 
 ## 2026-10-18: Build 11, high resolution and iPad full screen
 
@@ -170,7 +309,7 @@ Build 11 also corrects the bands, the green and pink edges, and the ghosting of 
 Two camera code paths in the game limit the aspect ratio to [1.6, 2.3917].
 The upstream `dm/tools/patch_nso.py` registers two rewrites for `fc9ea4cc` (0x2c4bad8 and 0x2c4c800).
 The rewrites only remove the 1.6 lower limit. The 2.3917 upper limit stays.
-The new modules are in `.nitenphone/work/silksong/patched-v655360-fullview`. `patched_dir` in `game.json` selects them.
+The new modules are in `.touchable/work/silksong/patched-v655360-fullview`. `patched_dir` in `game.json` selects them.
 Only `main` changes, by 2 bytes in total. The old module directory `patched-v655360` is kept.
 CPU checks: STRUCT passes (6 registered rewrites). EQUIV passes (0 differences, 100/100 mutations detected).
 
@@ -200,11 +339,11 @@ Limits:
 
 Save backups before the install:
 
-- iPad: `.nitenphone/saves/silksong/phone-before-install-20261018-012235-fb0a07`
-- iPhone: `.nitenphone/saves/silksong/phone-before-install-20261018-012918-b36fb9`
+- iPad: `.touchable/saves/silksong/phone-before-install-20261018-012235-fb0a07`
+- iPhone: `.touchable/saves/silksong/phone-before-install-20261018-012918-b36fb9`
 
 IPA: `IPA/silksong/Silksong-build11-20261018-011835-b57260.ipa`.
-For details, see [the build 11 record](../../../.nitenphone/work/silksong/reports/build11-hires-20261018/README.md).
+For details, see [the build 11 record](../../../.touchable/work/silksong/reports/build11-hires-20261018/README.md).
 
 ## 2026-10-18: iPad mini build 10
 
@@ -220,15 +359,15 @@ The running instance got to frame 1663. The p50 of 300-frame groups is 16.67 ms.
 The memory footprint is 1.8 GB. 1.5 GB remains before the system limit.
 No touch input was sent this time. The full flow is not verified.
 The provisioning profile expires on 2026-10-25.
-For details, see [the iPad mini record](../../../.nitenphone/work/silksong/reports/ipad-mini-20261018/README.md).
+For details, see [the iPad mini record](../../../.touchable/work/silksong/reports/ipad-mini-20261018/README.md).
 
 ## 2026-10-17: Directory cleanup and rebuild
 
 This rebuild uses build 9.
 The current IPA is in `IPA/silksong/`.
-The latest app path is recorded in `.nitenphone/build/games/silksong/latest.json`.
+The latest app path is recorded in `.touchable/build/games/silksong/latest.json`.
 The original packages, keys, old apps, original IPA, and save data are kept.
-The original IPA is moved to `.nitenphone/archive/ipa/`.
+The original IPA is moved to `.touchable/archive/ipa/`.
 This time, the new items are the build, the launcher, and the launch check records.
 Build 9 is installed on the iPhone through the launcher.
 Before and after the install, the SHA-256 of 21 save-related files is the same.
@@ -246,8 +385,8 @@ The results below come from existing tests.
 For the workspace maintenance rules, see [the maintenance notes](../../../docs/developer/workspace-maintenance.md).
 
 2026-10-17: Old builds were removed as the user requested.
-The latest local build at that time was in `.nitenphone/build/games/silksong/ios/`.
-The checksum records of the old IPA and the old build logs are kept in `.nitenphone/build/games/silksong/logs/retired-builds-20261017/`.
+The latest local build at that time was in `.touchable/build/games/silksong/ios/`.
+The checksum records of the old IPA and the old build logs are kept in `.touchable/build/games/silksong/logs/retired-builds-20261017/`.
 The old paths are only for the history record.
 For details, see [the build retention notes](../../../docs/developer/workspace-maintenance.md#latest-build-retention-2026-10-17).
 The latest local build at that time included the later shared fixes and was not signed yet. The build 8 IPA keeps its original signature.
@@ -260,9 +399,9 @@ On the same day, version 4 fixed two problems: the main save could not be writte
 
 Version 6 connects iPhone Core Haptics. The original amplitude, frequency profile, and stop signals of the game control the phone haptics. Output stops when the app goes to the background or when audio is interrupted. The phone has only one motor, so the output of the two Switch motors is merged. The frequency profile is expressed as Core Haptics sharpness.
 
-The image is rendered at the aspect ratio of the phone view. iPhone 16 Pro Max uses 1564×720 output and a 1252×576 world texture. The game camera uses this to make the horizontal field of view wider and keep the vertical field of view. The menus also use the actual aspect ratio. The v0 modules are in `.nitenphone/work/silksong/patched`. The version 4 modules are kept in `patched.before-phone-features-v4`. The comparison of local camera readings with the same scene passes. On 2026-10-14, the user confirmed that the character proportions in version 6 are correct and that haptic feedback stops when haptics strength is 0. Full-screen display, haptics, and UI proportions also passed device tests.
+The image is rendered at the aspect ratio of the phone view. iPhone 16 Pro Max uses 1564×720 output and a 1252×576 world texture. The game camera uses this to make the horizontal field of view wider and keep the vertical field of view. The menus also use the actual aspect ratio. The v0 modules are in `.touchable/work/silksong/patched`. The version 4 modules are kept in `patched.before-phone-features-v4`. The comparison of local camera readings with the same scene passes. On 2026-10-14, the user confirmed that the character proportions in version 6 are correct and that haptic feedback stops when haptics strength is 0. Full-screen display, haptics, and UI proportions also passed device tests.
 
-On 2026-10-14, version 7 changed to the game update v655360 (display version 1.0.30000). Switch updates are cumulative, so only the base package and the latest `[v655360].nsp` are used. The `[v131072]` NSZ is an earlier update and is not necessary. The updated content is in `.nitenphone/work/silksong/v655360`. The rewritten modules are in `.nitenphone/work/silksong/patched-v655360`. `content_dir` and `patched_dir` in `game.json` select them. The v0 content and modules are kept unchanged.
+On 2026-10-14, version 7 changed to the game update v655360 (display version 1.0.30000). Switch updates are cumulative, so only the base package and the latest `[v655360].nsp` are used. The `[v131072]` NSZ is an earlier update and is not necessary. The updated content is in `.touchable/work/silksong/v655360`. The rewritten modules are in `.touchable/work/silksong/patched-v655360`. `content_dir` and `patched_dir` in `game.json` select them. The v0 content and modules are kept unchanged.
 
 - The update changed only `main` (build ID `fc9ea4cc…`). `sdk`, `subsdk0`, and `rtld` are byte-identical to v0. The Unity version does not change.
 - The merged RomFS section passes all 6 levels (150,821 blocks) of the IVFC hash tree included in the update. The RomFS has 2,118 files, approximately 6.3 GiB.
@@ -271,7 +410,7 @@ On 2026-10-14, version 7 changed to the game update v655360 (display version 1.0
 - `main` plus bss is approximately 132 MB. This is more than the ±128 MB range of the B instruction. For out-of-range branches, the rewriter uses "veneer words". They are placed between functions, at positions that were dead NOP padding, and are registered in `main.veneers.tsv` (14,332 entries). In-range branches do not change. The v0 rewrite result is byte-identical. `structck.py` checks each veneer word independently, and `equiv.py` executes through the veneers. The structure and instruction equivalence checks pass for all three modules (49,778 rewrite points in main, 0 differences, all 100 mutations detected).
 - 398 new shaders (2,599 in total) were added. All translated successfully.
 - The Mac host test used a copy of the phone save: the menu showed 1.0.30000. The original save loaded. Character movement, dialog prompts, the pause menu, save and quit, and return to the main menu and reload all worked correctly. The game wrote a separate `user1_1.0.30000.dat` and kept the old `user1_1.0.27776.dat`.
-- The Documents folder (with save data) retrieved from the phone before the upgrade is in `.nitenphone/build/phone-saves-20261014-before-v655360`.
+- The Documents folder (with save data) retrieved from the phone before the upgrade is in `.touchable/build/phone-saves-20261014-before-v655360`.
 
 On 2026-10-14, version 8 decreased heat and made the frame rate stable. The version 7 phone log showed: almost every frame took 17.5 ms (approximately 57 fps; approximately 26 of each 300 frames were presented late). In gameplay, the GPU took 13–15 ms per frame. There were three causes. All are fixed:
 
@@ -290,11 +429,11 @@ Comparison on a Mac (M1) with the same save and the same gameplay operations:
 
 In the same process, screenshots of the pause screen were taken first with the old path and then with the new path. They are byte-identical (`DM_NVN_RULER=1`). In approximately 1 million absorbed updates, the shadow check against game memory made 0 corrections. Save load, movement, pause, save and quit, and return to the title and reload all worked correctly. A shared fix from the same day (another session) is also merged: retired textures and upload staging blocks could go into an autorelease pool that never drained. This is now fixed.
 
-Memory: On the Mac, the game uses approximately 2.7 GB in gameplay. Of this, approximately 2.0 GB is the game's own Switch memory (including an approximately 870 MB GPU memory pool), and approximately 0.5 GB is Metal textures and buffers. The game controls the first part. The phone save backup from before the version 8 install is in `.nitenphone/build/phone-saves-20261014-before-build8`.
+Memory: On the Mac, the game uses approximately 2.7 GB in gameplay. Of this, approximately 2.0 GB is the game's own Switch memory (including an approximately 870 MB GPU memory pool), and approximately 0.5 GB is Metal textures and buffers. The game controls the first part. The phone save backup from before the version 8 install is in `.touchable/build/phone-saves-20261014-before-build8`.
 
 On 2026-10-15, a shared fix after version 8 (another session): When the game destroys a texture, `mtl_tex_release` in `nvn_mtl.m` now releases the cached views of that texture. Before, texture slots that the game no longer used kept the old textures. Mac host test (`DM_NVN_TBDR=1`, 130 seconds in gameplay, `DM_RES_CENSUS=2`): at frame 7500, retired but not destroyed textures decreased from 23 (38 MB) to 0. GPU allocation decreased from 1009 MB to 970 MB. Conflicts in inline uniform updates are still 0. Version 8 on the phone does not include this fix. The next build will include it.
 
-Another shared change on the same day: the automatic block height in `nvn_tex.c` is now the GOB count of "height × 1.5", rounded down. Pre-laid-out textures use `pkg_block_h` and are not affected. Only render targets and textures created at runtime can change. Mac host test (current source, same save, same input as version 8): the pause menu, quit dialog, save and quit, title, save select, and reload all worked correctly, with 8 save commits. Compared with version 8, the screenshots differ only in animated parts. There are still the same 4 `【红】` (red) lines. Retired but not destroyed textures are 0 in all 29 census runs. In gameplay, frame time p50 is 16.65 ms and p99 is 18.7 ms, the same as version 8. The record is in `.nitenphone/work/silksong/reports/shared-fixes-20261015-mac-flow.json`.
+Another shared change on the same day: the automatic block height in `nvn_tex.c` is now the GOB count of "height × 1.5", rounded down. Pre-laid-out textures use `pkg_block_h` and are not affected. Only render targets and textures created at runtime can change. Mac host test (current source, same save, same input as version 8): the pause menu, quit dialog, save and quit, title, save select, and reload all worked correctly, with 8 save commits. Compared with version 8, the screenshots differ only in animated parts. There are still the same 4 `【红】` (red) lines. Retired but not destroyed textures are 0 in all 29 census runs. In gameplay, frame time p50 is 16.65 ms and p99 is 18.7 ms, the same as version 8. The record is in `.touchable/work/silksong/reports/shared-fixes-20261015-mac-flow.json`.
 
 On 2026-10-16, a shared graphics fix: `nvn_dirty.c` selects the memory pool from the full texture range and removes records by the original pool address.
 This fix corrects wrong lookups when multiple 4 KiB-aligned pools share one 16 KiB host page.
@@ -306,7 +445,7 @@ The 4 red diagnostics in the log are the same as in the 2026-10-15 regression lo
 They include two unmapped shader control sections and one program without a vertex shader.
 This check does not prove that the full game is correct.
 Silksong build 8 on the phone was not replaced.
-For the detailed record, see [the shared memory pool fix report](../../../.nitenphone/work/rhythm-heaven/reports/performance-20261016-134827/README.md).
+For the detailed record, see [the shared memory pool fix report](../../../.touchable/work/rhythm-heaven/reports/performance-20261016-134827/README.md).
 
 This is a playable test version. The current version skips cutscene videos that are not adapted yet. The full game flow is not verified yet. The IPA is generated only locally. It uses the local development signing and the game resources that the user supplies.
 
@@ -337,10 +476,10 @@ Main files:
 | `internal/tools/prepare_game.py` | Checks the NSP and extracts it with the local keys |
 | `internal/tools/romfs_storage.py` | Expands the NCA compressed storage that this version uses |
 | `internal/tools/patch_storage.py` | Reads update packages: indirect storage, AES-CTR-EX, IVFC and ExeFS hash checks |
-| `.nitenphone/work/silksong/v655360` | ExeFS and RomFS of the base package plus the v655360 update |
-| `.nitenphone/work/silksong/patched-v655360` | Rewritten modules for v655360, with `main.veneers.tsv` |
-| `.nitenphone/work/silksong/patched-v655360-fullview` | Current modules. The 1.6 aspect ratio lower limit is removed |
-| `.nitenphone/work/silksong/reports/il2cpp-v655360` | IL2CPP method table for v655360 |
+| `.touchable/work/silksong/v655360` | ExeFS and RomFS of the base package plus the v655360 update |
+| `.touchable/work/silksong/patched-v655360` | Rewritten modules for v655360, with `main.veneers.tsv` |
+| `.touchable/work/silksong/patched-v655360-fullview` | Current modules. The 1.6 aspect ratio lower limit is removed |
+| `.touchable/work/silksong/reports/il2cpp-v655360` | IL2CPP method table for v655360 |
 | `internal/tools/analyze_game.py` | Verifies NSO files and lists module dependencies |
 | `internal/tools/rewrite_game.py` | Runs the CPU rewrite and checks |
 | `internal/patches/d2r-mobile.patch` | Rewriter, host, and graphics patch against the pinned upstream revision |
@@ -353,23 +492,23 @@ Main files:
 | `internal/runtime/common/ss_haptics.c` | Switch rumble values and the mix of the two motors |
 | `internal/platform/ios/Haptics.m` | iPhone Core Haptics output and lifecycle |
 | `internal/platform/ios/probe/Probe.xcodeproj` | Device CPU test program |
-| `.nitenphone/build/games/silksong/ios-project/Silksong.xcodeproj` | Game app |
-| `.nitenphone/work/silksong/reports/iphone-cpu-probe.json` | Test results retrieved from the user's phone |
-| `.nitenphone/work/silksong/reports/save-quit-verification.json` | Verification record of the save and quit fixes |
-| `.nitenphone/work/silksong/reports/phone-features-verification.json` | Verification record of haptics, wide screen, actual camera readings, and the IPA |
-| `.nitenphone/work/silksong/patched/verification.json` | CPU check results and output hashes |
-| `.nitenphone/build/games/silksong/legacy/logs/rewrite/` | Structure check and instruction equivalence test logs |
+| `.touchable/build/games/silksong/ios-project/Silksong.xcodeproj` | Game app |
+| `.touchable/work/silksong/reports/iphone-cpu-probe.json` | Test results retrieved from the user's phone |
+| `.touchable/work/silksong/reports/save-quit-verification.json` | Verification record of the save and quit fixes |
+| `.touchable/work/silksong/reports/phone-features-verification.json` | Verification record of haptics, wide screen, actual camera readings, and the IPA |
+| `.touchable/work/silksong/patched/verification.json` | CPU check results and output hashes |
+| `.touchable/build/games/silksong/legacy/logs/rewrite/` | Structure check and instruction equivalence test logs |
 
 The local machine needs an Apple Silicon Mac, Xcode 27, and Python 3.9 or later. Keep at least 20 GiB of free space before extraction. The scripts build tools in the workspace. They do not install system packages.
 
 When the game resources and the signing configuration exist, you can rebuild the game and the IPA:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/prepare_ios.py --game silksong
-xcodebuild -project .nitenphone/build/games/silksong/ios-project/Silksong.xcodeproj -scheme Silksong \
-  -configuration Debug -sdk iphoneos -derivedDataPath .nitenphone/build/games/silksong/ios \
+.touchable/venv/bin/python internal/tools/prepare_ios.py --game silksong
+xcodebuild -project .touchable/build/games/silksong/ios-project/Silksong.xcodeproj -scheme Silksong \
+  -configuration Debug -sdk iphoneos -derivedDataPath .touchable/build/games/silksong/ios \
   -allowProvisioningUpdates DEVELOPMENT_TEAM=YOUR_TEAM build
-.nitenphone/venv/bin/python internal/tools/package_ios.py --game silksong --output IPA/silksong/Silksong.ipa
+.touchable/venv/bin/python internal/tools/package_ios.py --game silksong --output IPA/silksong/Silksong.ipa
 ```
 
 Replace `YOUR_TEAM` with the local development team ID. The signature applies only to the devices in the provisioning profile. The provisioning profile validity period also limits it.
@@ -377,7 +516,7 @@ Replace `YOUR_TEAM` with the local development team ID. The signature applies on
 When Xcode is not signed in to an Apple ID, automatic signing fails. Build first with `CODE_SIGNING_ALLOWED=NO`. Then sign with an existing provisioning profile. Version 7 was signed this way:
 
 ```sh
-APP=.nitenphone/build/games/silksong/ios/Build/Products/Debug-iphoneos/Silksong.app
+APP=.touchable/build/games/silksong/ios/Build/Products/Debug-iphoneos/Silksong.app
 cp "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/<PROFILE_UUID>.mobileprovision" "$APP/embedded.mobileprovision"
 codesign --force --sign "Apple Development" --entitlements entitlements.plist --generate-entitlement-der "$APP"
 ```
@@ -393,23 +532,23 @@ internal/tools/bootstrap.sh
 The input is in `MyGameFiles`. `prod.keys` is used only to read encrypted NCA content. The scripts do not print the keys and do not copy the keys into the test app. Intermediate key files use `0600` permissions and are deleted when the procedure ends.
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/prepare_game.py inspect --game silksong \
+.touchable/venv/bin/python internal/tools/prepare_game.py inspect --game silksong \
   'MyGameFiles/silksong/Hollow Knight Silksong [010013C00E930000][v0].nsp'
 
-.nitenphone/venv/bin/python internal/tools/prepare_game.py extract --game silksong \
+.touchable/venv/bin/python internal/tools/prepare_game.py extract --game silksong \
   'MyGameFiles/silksong/Hollow Knight Silksong [010013C00E930000][v0].nsp' \
   --keys 'MyGameFiles/keys/ProdKeys.-v22.5.0/prod.keys'
 
-.nitenphone/venv/bin/python internal/tools/analyze_game.py --game silksong
+.touchable/venv/bin/python internal/tools/analyze_game.py --game silksong
 ```
 
 The extraction script does not overwrite existing output. If the extraction result already exists, do not run it again. `extract` processes only the base package. For update packages, use `extract-update`:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/prepare_game.py extract-update --game silksong \
+.touchable/venv/bin/python internal/tools/prepare_game.py extract-update --game silksong \
   'MyGameFiles/silksong/Hollow Knight Silksong [010013C00E930000][v0].nsp' \
   'MyGameFiles/silksong/Hollow Knight Silksong [010013C00E930800][v655360].nsp' \
-  --keys 'MyGameFiles/keys/ProdKeys.-v22.5.0/prod.keys' --out .nitenphone/work/silksong/v655360
+  --keys 'MyGameFiles/keys/ProdKeys.-v22.5.0/prod.keys' --out .touchable/work/silksong/v655360
 ```
 
 It uses `internal/tools/patch_storage.py` to merge the indirect storage and the AES-CTR-EX encrypted update data. Then it expands the compression layer. The merged result must pass the IVFC hash tree of the update. ExeFS must pass its SHA-256 layer.
@@ -417,14 +556,14 @@ It uses `internal/tools/patch_storage.py` to merge the indirect storage and the 
 Run the rewrite and checks in a new output directory:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/rewrite_game.py --game silksong --out .nitenphone/work/silksong/rebuilt
+.touchable/venv/bin/python internal/tools/rewrite_game.py --game silksong --out .touchable/work/silksong/rebuilt
 ```
 
 Check the existing rewrite output:
 
 ```sh
-.nitenphone/venv/bin/python internal/tools/rewrite_game.py --game silksong --verify-only
-.nitenphone/venv/bin/python -m unittest discover -s internal/tests -p 'test_*.py' -v
+.touchable/venv/bin/python internal/tools/rewrite_game.py --game silksong --verify-only
+.touchable/venv/bin/python -m unittest discover -s internal/tests -p 'test_*.py' -v
 ```
 
 The structure check uses independent LLVM disassembly. The instruction equivalence test uses Unicorn. In Unicorn, a model represents the register effects of the signal handler. The Mac and iPhone test programs verify the real C signal handler code. These checks cannot prove that the full game runs correctly.
@@ -440,9 +579,9 @@ Replace the two parameters with the device ID and the development team ID from t
 
 ```sh
 xcrun devicectl device copy from --device DEVICE_ID \
-  --domain-type appDataContainer --domain-identifier com.mmmz.NitenphoneCPUProbe \
+  --domain-type appDataContainer --domain-identifier com.mmmz.TouchableCPUProbe \
   --source Documents/cpu-probe.json \
-  --destination .nitenphone/work/silksong/reports/iphone-cpu-probe.json
+  --destination .touchable/work/silksong/reports/iphone-cpu-probe.json
 ```
 
 `MyGameFiles`, extracted files, keys, build output, and signing information are all listed in `.gitignore`. The upstream d2r-mobile uses the MIT license, and hactool uses the ISC license. The related source code and licenses are kept in the local source directories.

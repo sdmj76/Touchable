@@ -310,7 +310,7 @@ def signing_settings(game, interactive):
         raise WorkspaceError('Complete the signing settings in the menu. A valid Team ID is necessary.')
     config['team_id'] = team
     if not settings.get('bundle_id'):
-        prefix = config.setdefault('bundle_prefix', 'dev.nitenphone.user' + uuid.uuid4().hex[:12])
+        prefix = config.setdefault('bundle_prefix', 'dev.touchable.user' + uuid.uuid4().hex[:12])
         settings['bundle_id'] = prefix + '.' + game.id
     write_json(LOCAL_ROOT / 'config.json', config)
     return {'mode': 'automatic', 'team': team}
@@ -432,7 +432,7 @@ def verify_ipa(game, path, destination):
     app = apps[0]
     with (app / 'Info.plist').open('rb') as stream:
         info = plistlib.load(stream)
-    if info.get('CFBundleIdentifier') != game.bundle_id or info.get('NitenGameID') != game.id:
+    if info.get('CFBundleIdentifier') != game.bundle_id or info.get('TouchableGameID') != game.id:
         raise WorkspaceError('The app identity in the IPA does not match.')
     # zipfile does not restore executable modes. Restore only the declared executable.
     executable = info['CFBundleExecutable']
@@ -532,7 +532,7 @@ def main():
                 print('Paired and booted iPhone/iPad devices: ' + str(len(devices())))
                 return 0
             if action == 'fresh':
-                os.environ['NITENPHONE_STATE_DIR'] = str(LOCAL_ROOT / 'rebuilds' / stamp())
+                os.environ['TOUCHABLE_STATE_DIR'] = str(LOCAL_ROOT / 'rebuilds' / stamp())
                 game = load_game(game.id)
             device = args.device
             if action == 'build-install' and not device:

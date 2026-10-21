@@ -1,5 +1,5 @@
 #include "dm.h"
-#include "niten_game.h"
+#include "touchable_game.h"
 #include <signal.h>
 #include <sys/ucontext.h>
 #include <mach/arm/thread_status.h>
@@ -80,6 +80,6 @@ void dm_prof_mark(const char *stage) { LOG("BOOT %s", stage); }
 void uimsg_subscribe(void (*callback)(const char *, const char *, const char *)) { (void)callback; }
 void crash_watch_frame(void) {}
 uint64_t svc_host_call(int number, uint64_t *registers) {
-    if (niten_game_host_call(number, registers)) return 1;
+    if (touchable_game_host_call(number, registers)) return 1;
     die("Unhandled game host call: %#x", number);
 }

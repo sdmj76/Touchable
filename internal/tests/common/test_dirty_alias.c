@@ -1,4 +1,4 @@
-/* Build with nvn_dirty.c, -DNITENPHONE_SWITCH_RUNTIME, and -pthread. */
+/* Build with nvn_dirty.c, -DTOUCHABLE_SWITCH_RUNTIME, and -pthread. */
 #include "nvn_dirty.h"
 #include <assert.h>
 #include <stdint.h>

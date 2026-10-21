@@ -5,7 +5,7 @@ Its original move list remains in [directory-migration.json](directory-migration
 That file is a historical record.
 
 The 2026-10-17 reorganization moves source code into `internal/`.
-It moves local work, dependencies, and build data into `.nitenphone/`.
+It moves local work, dependencies, and build data into `.touchable/`.
 It moves current IPAs into `IPA/<id>/`.
 It keeps source packages and keys in `MyGameFiles/`.
 Root aliases from the earlier layout are no longer user entry points.

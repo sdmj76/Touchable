@@ -30,7 +30,9 @@ int main(void) {
     check("zh", "zh-Hans");
     check("zh_TW", "zh-Hant");
     check("yue-Hant-HK", "zh-Hant");
-    check("yue-Hans-HK", "zh-Hant");
+    check("yue-Hans-HK", "zh-Hans");   /* the script subtag also wins for Cantonese */
+    check("yue", "zh-Hant");
+    check("yue-CN", "zh-Hant");
     /* Other languages keep the existing mapping. */
     check("en-US", "en-US");
     check("en-HK", "en-US");

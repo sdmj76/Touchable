@@ -75,14 +75,14 @@ index a3c8de0dfb33b49734ad816d8e260877a0152ac8..34e8797248bda4163d513fda441b61be
 +    destroy_ex(s);
 +}
 diff --git a/dm/gfx/nvn/hle_nvn.c b/dm/gfx/nvn/hle_nvn.c
-index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec984eb18c4 100644
+index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..b7ae082c4609771cacea628c1a2d46a1f2eb8e85 100644
 --- a/dm/gfx/nvn/hle_nvn.c
 +++ b/dm/gfx/nvn/hle_nvn.c
 @@ -58,6 +58,12 @@ static uint8_t g_unimpl_seen[NVN_NFUNC];
  
  uint64_t nvn_unimpl_c(nvn_slot_t *slot, uint64_t x0, uint64_t x1, uint64_t x2) {
      unsigned i = (unsigned)(slot - nvn_slot);
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    /* SS_NVN_CONTINUE=1 is for adapter development: list every missing call in one run. */
 +    static int keep_going = -1;
 +    if (keep_going < 0) keep_going = getenv("SS_NVN_CONTINUE") != NULL;
@@ -132,7 +132,7 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
  NVN(nvnTextureBuilderSetDefaults, void, NVNtextureBuilder *b) {
      NVNdevice *dev = TB(b)->dev; memset(b, 0, sizeof(tex_builder_t)); TB(b)->dev = dev;
      TB(b)->d.target = NVN_TEXTURE_TARGET_2D; TB(b)->d.width = TB(b)->d.height = TB(b)->d.depth = TB(b)->d.levels = 1;
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    for (unsigned i = 0; i < 4; ++i) TB(b)->d.swizzle[i] = i + 2;
 +#endif
  }
@@ -144,13 +144,13 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
      o->magic = MAGIC('T', 'E', 'X', 0); o->d = s->d; o->pool = s->pool; o->off = s->off;
 -    o->has_layout = s->has_layout; memcpy(o->layout, s->layout, 8);
 +    o->has_layout = s->has_layout;
-+#ifndef NITENPHONE_SWITCH_RUNTIME
++#ifndef TOUCHABLE_SWITCH_RUNTIME
 +    memcpy(o->layout, s->layout, 8);
 +#endif
      nvn_tex_layout(&o->d, &o->L);
      o->mem = s->pool && s->pool->mem ? s->pool->mem + s->off : NULL;
      o->serial = nvn_new_serial();
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    /* NVN samples a texture from its pool memory. nn::gfx games load texture files into memory and
 +       create the pool over it without a packaged layout; that data uses the default block-linear
 +       layout. Display and compressible textures are render targets and stay GPU-only.
@@ -159,7 +159,7 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
 +        !(o->d.flags & (NVN_TEXTURE_FLAGS_DISPLAY | NVN_TEXTURE_FLAGS_COMPRESSIBLE)) && !(s->pool->flags & NVN_MEMORY_POOL_FLAGS_COMPRESSIBLE))
 +        o->has_layout = 2;
 +#endif
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    { static int texlog = -1; if (texlog < 0) texlog = getenv("SS_NVN_TEXLOG") != NULL;
 +      if (texlog) LOG("[nvn] texture ser=%llu %ux%ux%u lv%u fmt=%#x tgt=%d flags=%#x pool_flags=%#x layout=%d size=%#llx", (unsigned long long)o->serial,
 +                      o->d.width, o->d.height, o->d.depth, o->d.levels, o->d.format, o->d.target, o->d.flags, o->pool ? o->pool->flags : 0, o->has_layout, o->L.size); }
@@ -198,7 +198,7 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
  }
  NVN(nvnSamplerFinalize, void, NVNsampler *s) { ((samp_t *)s)->magic = 0; }
  
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +#include "ss_nvn.inc"
 +#endif
 +
@@ -211,7 +211,7 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
 +NVN(nvnProgramFinalize, void, NVNprogram *p) {
 +    prog_t *o = (prog_t *)p;
 +    mtl_prog_release(o);
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    for (unsigned i = 0; i < o->nstage; ++i) free((void *)o->sd[i].control);
 +    o->nstage = 0;
 +#endif
@@ -220,7 +220,7 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
  NVN(nvnProgramSetShaders, NVNboolean, NVNprogram *p, int n, const NVNshaderData *sd) {
      prog_t *o = (prog_t *)p;
      if (n < 0 || n > 6) { LOG("【红】ProgramSetShaders 阶段数 %d", n); return 0; }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    extern void ss_capture_shader(const void *, uint64_t);
 +    /* Unity reuses the temporary control blocks after this call. A native NVN
 +     * program has already consumed them by then. Keep our own immutable copy
@@ -243,7 +243,7 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
      // The thunk is a tail jump (br), so the return address here is the call site in the game
      *REC(c, OP_DISPATCH, p_dispatch) = (p_dispatch){x, y, z, (uint64_t)__builtin_return_address(0)};
  }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +#include "ss_nvn_commands.inc"
 +#endif
  NVN(nvnCommandBufferBarrier, void, NVNcommandBuffer *c, int bits) { *(int32_t *)rec(c, OP_BARRIER, 8) = bits; }
@@ -253,7 +253,7 @@ index d64e95f0e585a59d3b25e75f9e397305f1b1ce88..4fc3624c32b75848d47f4b6ad2f2eec9
  // Commands that only affect GPU state / only execute on the GPU: the null device only counts them (the thunk has already counted)
  static void nvn_nop(void) {}
  static const char *const g_nops[] = {
-+#ifndef NITENPHONE_SWITCH_RUNTIME
++#ifndef TOUCHABLE_SWITCH_RUNTIME
      "nvnCommandBufferSetPatchSize",
      "nvnCommandBufferMultiDrawArraysIndirectCount",
      "nvnCommandBufferMultiDrawElementsIndirectCount",
@@ -356,7 +356,7 @@ index f41f41134cc4beda9b8c4903d6014fef7994839e..826703a44b1dc84ff3af67c6236d5639
 -#define NVN_NFUNC 523
 +#define NVN_NFUNC 536
 diff --git a/dm/gfx/nvn/nvn_dirty.c b/dm/gfx/nvn/nvn_dirty.c
-index 2d44f70970fcaedba4fe0de9833f0df34c1d613e..7c51a4a0cc2d790d0b887a38b5de4e840143558b 100644
+index 2d44f70970fcaedba4fe0de9833f0df34c1d613e..44b2cfbfe07ac5c7054615ec6a70eca7b020750f 100644
 --- a/dm/gfx/nvn/nvn_dirty.c
 +++ b/dm/gfx/nvn/nvn_dirty.c
 @@ -34,7 +34,7 @@ enum { BUSY_WAIT_MS = 2000 };
@@ -395,7 +395,7 @@ index 2d44f70970fcaedba4fe0de9833f0df34c1d613e..7c51a4a0cc2d790d0b887a38b5de4e84
      atomic_store(&r->gen[p], atomic_fetch_add(&g_now, 1) + 1);
      atomic_store(&r->state[p], PG_NONE);
  }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +/* Pools are 4 KiB aligned on the console and host pages are larger, so two pools can share one host
 +   page. The page may have been protected through either range; check every range that covers it,
 +   and mark the others dirty too once the page is writable. */
@@ -414,7 +414,7 @@ index 2d44f70970fcaedba4fe0de9833f0df34c1d613e..7c51a4a0cc2d790d0b887a38b5de4e84
 +#endif
  static int on_fault(void *addr, int is_write, void *uc) {
      (void)uc;
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    if (!is_write) return 0;
 +    uintptr_t a = (uintptr_t)addr, page = a & ~(g_pg - 1);
 +    int n = atomic_load(&g_nr), unprotected_elsewhere = 0;
@@ -441,7 +441,7 @@ index 2d44f70970fcaedba4fe0de9833f0df34c1d613e..7c51a4a0cc2d790d0b887a38b5de4e84
 +#endif
  }
  static void prep_write(void *addr, size_t len) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    /* Host writes: unprotect every protected page in [addr, addr + len) through each covering range. */
 +    if (!len) return;
 +    for (uintptr_t page = (uintptr_t)addr & ~(g_pg - 1), last = ((uintptr_t)addr + len - 1) & ~(g_pg - 1); page <= last; page += g_pg) {
@@ -519,7 +519,7 @@ index 9517682b7cf007333d43166301ac062ed1ad9914..9759b2c371674af4d90b7b607508e25e
  void mtl_ui_ghost(int on, float px, float py, const float grid[4], float cx, float cy);   // 拖货跟手图：on=1 时把盖住屏幕点 (px,py)、压在货架格网 grid（左上角 x,y、一格宽高）上的那件货的图标在界面趟末尾平移到中心 (cx,cy) 再画一遍（归一化，左上原点）；任意线程调 | Drag-follow image for shop items: when on=1, the icon of the item that covers screen point (px,py) and sits on the shop shelf grid `grid` (top-left x,y, width and height of one cell) is translated to center (cx,cy) and drawn once more at the end of the UI pass (normalized, top-left origin); callable from any thread
  int mtl_ui_ghost_rect(float r[4]);   // 上面认到的那件货的屏幕矩形（归一化）；还没认到返回 0 | Screen rectangle (normalized) of the item recognized above; returns 0 if not recognized yet
 diff --git a/dm/gfx/nvn/nvn_mtl.m b/dm/gfx/nvn/nvn_mtl.m
-index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0b5a237f2 100644
+index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..b057793e7110ea9748424b63a3bbfb0624c306db 100644
 --- a/dm/gfx/nvn/nvn_mtl.m
 +++ b/dm/gfx/nvn/nvn_mtl.m
 @@ -23,7 +23,11 @@
@@ -527,7 +527,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
  #include "nvn_refl.h"
  #include "nvn_cover.h"
 -#include "dmsh_chain.h"   // DMSH_CHAIN：本源码树期望的 B 着色器库翻译链版本 | DMSH_CHAIN: the translation chain version of the B shader library expected by this source tree
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +#include "ss_shader_chain.h"
 +#else
 +#include "dmsh_chain.h"
@@ -739,7 +739,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      return v;
  }
  static int bc_unpack(uint32_t nvn_fmt, uint32_t *pf, int *bpp) { return no_bc() && nvn_bc_unpacked(nvn_fmt, pf, bpp); }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +/* A view swizzle replaces the texture swizzle, as in NVN. */
 +static MTLTextureSwizzleChannels ss_tex_swizzle(const nvn_texdesc *desc, const view_t *view, int *changed) {
 +    uint32_t format; uint8_t basis[4] = {2, 3, 4, 5}, result[4];
@@ -764,7 +764,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
 +    d.usage = MTLTextureUsageShaderRead | (fmt_compressed(t->d.format) || (packaged && t->has_layout == 1) ? 0 : MTLTextureUsageRenderTarget)
              | (t->d.flags & NVN_TEXTURE_FLAGS_IMAGE ? MTLTextureUsageShaderWrite : 0)   // 图像用途：着色器可写（计算核生成 3D 调色表等） | Image usage: shader-writable (compute kernels generating the 3D color lookup table, etc.)
              | (unp ? MTLTextureUsageShaderWrite | MTLTextureUsagePixelFormatView : 0);   // 无 BC：解压格式贴图由 GPU 解压核写（up_dec）/ 接 ASTC 源的整块拷贝（copy_t2t_astc） | No BC: textures in the decompressed format are written by the GPU decompression kernel (up_dec) / receive whole-block copies from ASTC sources (copy_t2t_astc)
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    int swizzled; ss_tex_swizzle(&t->d, NULL, &swizzled);
 +    if (swizzled) d.usage |= MTLTextureUsagePixelFormatView;
 +#endif
@@ -775,7 +775,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      up_flush();
      return mt;
  }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +/* A linear 2D texture in pool memory can be a Metal view of the pool buffer itself: CPU writes are
 +   visible like on the console and nothing is uploaded. Returns nil when Metal's alignment rules
 +   do not allow it; the texture then takes the upload path. */
@@ -803,7 +803,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      if (!t || !t->serial) return nil;
      int packaged = t->has_layout && t->mem;
      id have = serial_get(t->serial);
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    if (packaged && t->has_layout == 2 && (t->d.flags & NVN_TEXTURE_FLAGS_LINEAR)) {
 +        if (have && ![have isKindOfClass:[NvPkg class]]) return have;
 +        if (!have) { id<MTLTexture> view = linear_pool_view(t); if (view) { serial_put(t->serial, view); return view; } }
@@ -921,7 +921,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      shmap_load();
      NvProg *o = [NvProg new];
      for (unsigned i = 0; i < p->nstage; i++) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        /* The game selects the key. It matches the offline shader files and runtime capture. */
 +        extern void ss_shader_key(const void *, uint64_t, char[17]);
 +        char key[17]; ss_shader_key(p->sd[i].control, p->sd[i].data, key);
@@ -931,7 +931,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
          NSString *k = [NSString stringWithFormat:@"%02x%02x%02x%02x%02x%02x%02x%02x", md[0], md[1], md[2], md[3], md[4], md[5], md[6], md[7]];
 +#endif
          NSString *zh = g_shmap[k];
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        if (!zh && g_shmap_equivalent.count) {
 +            extern void ss_shader_equivalent_key(const void *, uint64_t, char[65]);
 +            char equivalent[65];
@@ -1005,7 +1005,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      treg_t r = *rp;
      id<MTLTexture> base = tex_mtl(&rp->t);
      if (!base) return nil;
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    { int view_swizzled; ss_tex_swizzle(&r.t.d, r.has_v ? &r.v : NULL, &view_swizzled);
 +      if (view_swizzled && !(base.usage & MTLTextureUsagePixelFormatView)) { base = tex_upgrade_pfv(&rp->t, base, base.pixelFormat); sg = g_ser_gen; } }
 +#endif
@@ -1016,7 +1016,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
          v = [base newTextureViewWithPixelFormat:(MTLPixelFormat)pf textureType:tt levels:NSMakeRange(l0, nl) slices:NSMakeRange(s0, ns)];
          if (!v) { RED_ONCE(11, "贴图视图建不出 id %d", tid); v = base; }
      }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    int swizzled; MTLTextureSwizzleChannels swizzle = ss_tex_swizzle(&r.t.d, r.has_v ? &r.v : NULL, &swizzled);
 +    if (swizzled) {
 +        NSUInteger slices = v.textureType == MTLTextureType3D ? 1 : v.arrayLength *
@@ -1505,7 +1505,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      enc_b_end(b); [cb commit]; [cb waitUntilCompleted];
      for (int z = 0; z < nz; z++) for (size_t y = 0; y < hb; y++) memcpy(dst + z * img + y * row, (uint8_t *)buf.contents + z * wb * hb + y * wb, wb);
  }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +void ss_mtl_write_texels(const tex_t *t, unsigned level, unsigned layer, const NVNcopyRegion *r,
 +                         const void *source, size_t row, size_t image) { @autoreleasepool {
 +    mtl_init();
@@ -1550,7 +1550,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      defer_obj_unref(sv); defer_obj_unref(dv); defer_obj_release(pb);   // 本次提交跑完再放（视图不单独驻留，参数块撤驻留） | Release after this submit has finished running (views are not made resident separately; the parameter block is removed from residency)
      return 1;
  }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +/* Scaled or format-converting texture copy: draw the source region into the destination region in
 + * the replay command buffer. NVN_COPY_FLAGS_LINEAR_FILTER_BIT selects bilinear filtering. */
 +static const char k_t2t_scale_msl[] =
@@ -1637,7 +1637,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
          for (int z = 0; z < nz && ok; z++) ok = copy_t2t_astc(s, d, sl, sz0 + c->sr.zoffset + z, dl, dz0 + c->dr.zoffset + z, c->sr.xoffset, c->sr.yoffset, c->dr.xoffset, c->dr.yoffset, c->sr.width, c->sr.height);
          if (ok) return;
      }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    if (!c->sr.width || !c->sr.height || !c->dr.width || !c->dr.height) return;   /* An empty region copies nothing. */
 +    if ((c->sr.width != c->dr.width || c->sr.height != c->dr.height || s.pixelFormat != d.pixelFormat) && !s3 && !d3 && nz == 1 &&
 +        (c->dr.depth ? c->dr.depth : 1) == 1 && !(c->flags & ~NVN_COPY_FLAGS_ENGINE_2D_BIT & ~NVN_COPY_FLAGS_LINEAR_FILTER_BIT) &&
@@ -1660,7 +1660,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
  
  // 一次提交的现场描述（mtl_sub_commit 每次提交取一份，命令缓冲出错时打进红行）：进崔凡克首帧的 GPU 内存故障，红行里只有序号与错误码，看不出那次提交里有什么
  // Context description of one submit (mtl_sub_commit takes one per submit and prints it into the failure line when the command buffer errors): for the GPU memory fault on the first frame entering Travincal, the failure line had only the sequence number and error code, and it was impossible to tell what was in that submit
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +#include "ss_mtl_clear.inc"
 +#endif
  static const char *cctx_snap(void) {
@@ -1706,7 +1706,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
                  if (c->index < 0 || c->index >= R.rt.n || !R.rt.color[c->index]) { RED_ONCE(5, "清色目标 %d 无效", c->index); break; }
 -                if (g_enc || c->mask != 0xf || !scissor_full(R.rt.color[c->index], &R.rt.cview[c->index], R.rt.has_cview[c->index])) { RED_ONCE(6, "通道中途 / 部分掩码 / 部分剪裁的清色未实现（首例 掩码 %#x）", c->mask); break; }
 +                if (g_enc || c->mask != 0xf || !scissor_full(R.rt.color[c->index], &R.rt.cview[c->index], R.rt.has_cview[c->index])) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +                    ss_clear_attachment(c, NULL);
 +#else
 +                    RED_ONCE(6, "通道中途 / 部分掩码 / 部分剪裁的清色未实现（首例 掩码 %#x）", c->mask);
@@ -1719,7 +1719,7 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
              case OP_CLEAR_DS: {
                  const p_clear_ds *c = a;
                  if (g_rt_merged) rp_end();
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +                if (!R.rt.depth) break;
 +                if (g_enc || (c->stencil_mask && (c->stencil_mask & 255) != 255) ||
 +                    !scissor_full(R.rt.depth, &R.rt.dview, R.rt.has_dview)) {
@@ -2124,14 +2124,14 @@ index 0a0fa2cb29219e490e9bc1f720b7a6e01363036e..f1a5d62ed9340f6c536ad203c1c6f6d0
      for (int i = 0; i < nshot; i++) if ((long)g_present_n == shots[i]) { char path[1024]; snprintf(path, sizeof path, shot_path, (int)g_present_n); mtl_finish_gpu(); shot(src, path, 1, crop); }
      pthread_mutex_lock(&g_shotq_mu);
 diff --git a/dm/gfx/nvn/nvn_obj.h b/dm/gfx/nvn/nvn_obj.h
-index ee45b29af71e2af05ad1eaf27d1deea26acf36fe..5efa9e71ff06d118a734bc5b29bd7a39aff0f96a 100644
+index ee45b29af71e2af05ad1eaf27d1deea26acf36fe..de08e514290a08bb31836ed50f233f78014e6b4a 100644
 --- a/dm/gfx/nvn/nvn_obj.h
 +++ b/dm/gfx/nvn/nvn_obj.h
 @@ -31,10 +31,24 @@ typedef struct {
      uint8_t has_layout, layout[8];
  } tex_builder_t;                                                                             FITS(tex_builder_t, NVNtextureBuilder);
  typedef struct {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    // Unity stores swapchain texture objects at a 0x80-byte stride.
 +    // pkg_block_h contains the only packaged-layout field used after creation.
 +    uint32_t magic; nvn_texdesc d; uint8_t has_layout;
@@ -2142,7 +2142,7 @@ index ee45b29af71e2af05ad1eaf27d1deea26acf36fe..5efa9e71ff06d118a734bc5b29bd7a39
      uint64_t serial;                     // 初始化序号：回放层按它在宿主表里找 MTLTexture（游戏可能按值拷贝对象，不能存对象指针） | Initialization serial: the replay layer uses it to find the MTLTexture in the host table (the game may copy the object by value, so object pointers cannot be stored)
  } tex_t;                                                                                     FITS(tex_t, NVNtexture);
 -typedef struct { uint8_t set_levels, set_layers, set_format, set_target; int32_t base_level, nlevels, min_layer, nlayers, format, target; } view_t;
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +_Static_assert(sizeof(tex_t) <= 0x80, "Silksong NVNtexture allocation is 128 bytes");
 +#endif
 +// Newer SDKs allocate NVNtextureView in 16 bytes (nn::gfx places views 16 bytes apart on the stack), so the host view is packed to 16 bytes.
@@ -2223,14 +2223,14 @@ index e9494bb88698e7a3f32c55fef5814efa2339868b..313ca1054aa4adc914c9ae91ef31dc27
      o->tileH = tileH; o->tileD = tileD;
      unsigned levels = d->levels ? d->levels : 1;
 diff --git a/dm/gfx/nvn/nvn_tex.h b/dm/gfx/nvn/nvn_tex.h
-index 6d12cd70dce5b056e2fead06bc31bf20410b2489..f9a76abfeff96bc0e94cb886c23ef37a36a45a2f 100644
+index 6d12cd70dce5b056e2fead06bc31bf20410b2489..10285cd00ef3683207cbec4be358221fab7a6e06 100644
 --- a/dm/gfx/nvn/nvn_tex.h
 +++ b/dm/gfx/nvn/nvn_tex.h
 @@ -7,6 +7,9 @@ typedef struct {
      int target, format, flags, samples;   // NVNtextureTarget / NVNformat / NVNtextureFlags / 采样数（0 或 1 = 单采样） | NVNtextureTarget / NVNformat / NVNtextureFlags / sample count (0 or 1 = single-sampled)
      uint32_t width, height, depth, levels, stride;
      int pkg_block_h;                      // 预排布贴图布局参数第 0 字节（块高 log2）+ 1；0 = 按自动算法 | Byte 0 of the packaged texture layout parameters (log2 of block height) + 1; 0 = use the automatic algorithm
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    uint8_t swizzle[4], swizzle_set;
 +#endif
  } nvn_texdesc;
@@ -2934,14 +2934,14 @@ index 77eff73cdae4194f5a86be12bae9ce7044198471..bb7b4008f872883c6801d5d6583a4c96
      for(int mode=0;mode<6;mode++) { printf("CASE %s\n",names[mode]); result o=render_case(mode,0),r=render_case(mode,1);
          save_result(names[mode],0,&o); save_result(names[mode],1,&r);
 diff --git a/dm/gfx/tex/nvn_deswizzle.c b/dm/gfx/tex/nvn_deswizzle.c
-index ec0e47a3c1a80b272c3df105ab9e6d9140c7dce9..7bd105feef1b31b712c30f44c3e241dfd6b093cd 100644
+index ec0e47a3c1a80b272c3df105ab9e6d9140c7dce9..d71d0a262ac2019d0a0f238a4b72363af67dcd4c 100644
 --- a/dm/gfx/tex/nvn_deswizzle.c
 +++ b/dm/gfx/tex/nvn_deswizzle.c
 @@ -46,7 +46,28 @@ int nvn_deswizzle_geom(const nvn_texdesc *d, unsigned level, unsigned layer,
      return 0;
  }
  
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +/* LINEAR 2D textures: one level, rows at the texture stride (nvn_tex.c computes the same stride). */
 +static int move_linear(const nvn_texdesc *d, unsigned level, unsigned layer, uint8_t *storage, uint8_t *lin, size_t pitch, int to_linear) {
 +    if (level || layer || (d->target != 0 && d->target != 1) || d->samples > 1) return -1;
@@ -2960,7 +2960,7 @@ index ec0e47a3c1a80b272c3df105ab9e6d9140c7dce9..7bd105feef1b31b712c30f44c3e241df
 +#endif
 +
  static int move(const nvn_texdesc *d, unsigned level, unsigned layer, uint8_t *bl, uint8_t *lin, size_t pitch, int to_linear) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    if (d->flags & 0x10) return move_linear(d, level, layer, bl, lin, pitch, to_linear);
 +#endif
      uint32_t row_bytes, rows, slices, bpb; uint64_t base; unsigned th, td;
@@ -2982,14 +2982,14 @@ index 9037403a84b80a9c64fde241171087eb55244b00..4a664068c1b66b8730414026ef00e9d5
              string t = slot >= 0 ? Get("tex", slot) ?? Get("img", slot) : null;
              if (t == null) { Notes.Add($"贴图句柄 {handle:X}（常量段 {cbufSlot}，槽 {slot}）无 PC 类型，按 2D"); return SamplerType.Texture2D; }
 diff --git a/dm/host/hle.c b/dm/host/hle.c
-index 605c870ebe0315b23142dc05acbe2009c1eef6e0..8b41cb2f16417aca6e4f690ea3a726abb33e2289 100644
+index 605c870ebe0315b23142dc05acbe2009c1eef6e0..db752bdfb7ace8d1f16949ad0bf10c0e35d3eb79 100644
 --- a/dm/host/hle.c
 +++ b/dm/host/hle.c
 @@ -17,6 +17,9 @@ static uint8_t g_stub_seen[MAX_STUB];
  extern uint64_t unimpl_stubs[MAX_STUB];   // 每桩 8 字节 | 8 bytes per stub
  
  uint64_t unimpl_c(unsigned idx, uint64_t *regs) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    die("Unsupported import: %s (x0=%#llx x1=%#llx)", g_stub_name[idx], regs[0], regs[1]);
 +#endif
      if (!g_stub_seen[idx]++)
@@ -3019,7 +3019,7 @@ index 605c870ebe0315b23142dc05acbe2009c1eef6e0..8b41cb2f16417aca6e4f690ea3a726ab
 -void stubs_report(void) { LOG("stubs=%u", g_nstub); }
 +void stubs_report(void) {
 +    LOG("stubs=%u", g_nstub);
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    for (unsigned k = 0; k < g_nstub; ++k) LOG("Unresolved import: %s", g_stub_name[k]);
 +#endif
 +}
@@ -3043,14 +3043,14 @@ index f460f67d34920e5234cbea2a4cece030df27dc29..5a0bc8424cac31e7feb898e36d803a64
 +enum { SVC_HOST_SILKSONG_SCREEN_WIDTH = 0xf0,
 +       SVC_HOST_SILKSONG_SCREEN_HEIGHT = 0xf1 };
 diff --git a/dm/host/hle_fs.c b/dm/host/hle_fs.c
-index ff8e772f43c2695a353900dfe2c6882291109457..e3a071542f2bc06707b6626dd237d19a029abf4d 100644
+index ff8e772f43c2695a353900dfe2c6882291109457..800fdfdc538f935deb8997ac09a3f52137f3a77c 100644
 --- a/dm/host/hle_fs.c
 +++ b/dm/host/hle_fs.c
 @@ -143,6 +143,9 @@ static int path_component(char *parent, size_t n, const char *name, int create)
      if (len + k + 2 > n) { errno = ENAMETOOLONG; return 0; }
      parent[len] = '/'; memcpy(parent + len + 1, physical, k + 1); return 1;
  }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +#include "ss_fs_lookup.inc"
 +#endif
  static int root_path(const char *root, const char *rest, char *out, size_t n) {
@@ -3062,7 +3062,7 @@ index ff8e772f43c2695a353900dfe2c6882291109457..e3a071542f2bc06707b6626dd237d19a
              const char *next = end; while (*next == '/') next++;
 -            if (strcmp(part, ".") && !path_component(out, n, part, create && !*next)) return 0;
 +            if (strcmp(part, ".")) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +                if (g_mnt[i].ro && !create) {
 +                    if (!ss_path_component_ro(out, n, part)) return 0;
 +                } else
@@ -3076,7 +3076,7 @@ index ff8e772f43c2695a353900dfe2c6882291109457..e3a071542f2bc06707b6626dd237d19a
      const char *d = getenv("DM_SAVE");
      if (!d) die("未设 DM_SAVE：请指向一份存档目录的可写副本");
      char dd[1024]; strlcpy(dd, d, sizeof dd); size_t L = strlen(dd); while (L > 1 && dd[L - 1] == '/') dd[--L] = 0;   // 去掉结尾斜杠（.work / .new 拼在同级） | strip trailing slashes (.work / .new are appended at the same level)
-+#ifndef NITENPHONE_SWITCH_RUNTIME
++#ifndef TOUCHABLE_SWITCH_RUNTIME
      stash_seed(dd);
      low_vision_off(dd);
      settings_seed(dd); settings_lang_apply(dd);
@@ -3110,22 +3110,22 @@ index ff8e772f43c2695a353900dfe2c6882291109457..e3a071542f2bc06707b6626dd237d19a
      return RES_OK;
  }
  HLE_FORCE("_ZN2nn2fs12GetEntryTypeEPNS0_18DirectoryEntryTypeEPKc", "fsp-srv → stat(2)", Result, h_fs_GetEntryType, int32_t *out, const char *path) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    if (g_flag.fs) LOG("fs entry %s", path);
 +#endif
      HP(path); struct stat st;
      if (stat(hp, &st)) return err_res("stat", hp);
      *out = S_ISDIR(st.st_mode) ? ENT_DIR : ENT_FILE; return RES_OK;
 diff --git a/dm/host/hle_svc.c b/dm/host/hle_svc.c
-index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe23c3b462 100644
+index b4635b145176cc037566a5e7a2d6d649cdf0a081..3f416c1db3d8e71bd13703c2753486edd9974a22 100644
 --- a/dm/host/hle_svc.c
 +++ b/dm/host/hle_svc.c
 @@ -4,6 +4,9 @@
  // Register convention: inputs w1.. / outputs w0=Result, x1=value (GetInfo / SetHeapSize), consistent with the public Horizon ABI.
  #include "dm.h"
  #include "hle.h"
-+#ifdef NITENPHONE_SWITCH_RUNTIME
-+#include "niten_game_config.h"
++#ifdef TOUCHABLE_SWITCH_RUNTIME
++#include "touchable_game_config.h"
 +#endif
  #include <stdatomic.h>
  #include <sys/mman.h>
@@ -3134,7 +3134,7 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
      if (g_as == MAP_FAILED) die("reserve guest AS");
      // 固定划分（都在预留块内）：alias 512MB、stack 256MB、heap 其余从 2GB 处起
      // Fixed partition (all inside the reserved block): alias 512MB, stack 256MB, heap the rest starting at 2GB
-+#if defined(NITENPHONE_SWITCH_RUNTIME) && !defined(SS_GUEST_LARGE_HEAP)
++#if defined(TOUCHABLE_SWITCH_RUNTIME) && !defined(SS_GUEST_LARGE_HEAP)
 +    /* Unity uses virtual-address allocation. The SDK reserves its first
 +       1022 MiB for allocation metadata before it allocates game pages.
 +       Games that set one heap of about the whole pool use SS_GUEST_LARGE_HEAP. */
@@ -3153,7 +3153,7 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
  static module_t *mod_named(const char *n) { for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].name, n)) return &g_mod[i]; return NULL; }
  static _Atomic unsigned long long g_gheap_last[3];
  int dm_guest_heap_stat(unsigned long long *total_mb, unsigned long long *free_mb, unsigned long long *maxblk_kb) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    (void)total_mb; (void)free_mb; (void)maxblk_kb;
 +    return 0;
 +#else
@@ -3170,7 +3170,7 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
  HLE_FORCE("_ZN2nn3mem17StandardAllocator8AllocateEmm", "照原版分配，只在返回空时报红（原版调用方多处不判空）", void *, hle_stdalloc_allocate, void *self, size_t size, size_t align) {
 -    static void *(*orig)(void *, size_t, size_t); if (!orig) { module_t *ms = mod_named("sdk"); orig = (void *(*)(void *, size_t, size_t))(ms->base + 0x2f9974); }
 +    static void *(*orig)(void *, size_t, size_t);
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    /* sdk+0x2f9974 belongs to the D2R sdk. Other games call their own exported allocator. */
 +    if (!orig && !(orig = (void *(*)(void *, size_t, size_t))guest_sym("_ZN2nn3mem17StandardAllocator8AllocateEmm")))
 +        die("The guest does not export StandardAllocator::Allocate");
@@ -3184,7 +3184,7 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
  }
  static void map_del(int i) { pthread_mutex_lock(&g_map_lock); g_map[i] = g_map[--g_nmap]; pthread_mutex_unlock(&g_map_lock); }
  
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +#include "ss_memory.inc"
 +#endif
  int svc_thread(int num, uint64_t *regs);   // hle_thread.c：线程与同步类 | hle_thread.c: thread and synchronization kind
@@ -3194,7 +3194,7 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
          uint64_t base, size, state, perm;
          int k;
          if (a >= g_heap && a < g_heap + g_heap_cur) { base=(uint64_t)g_heap; size=g_heap_cur; state=5/*Heap*/; perm=3; }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        else if (a >= g_alias && a < g_alias + g_alias_cap) ss_alias_query(addr, &base, &size, &state, &perm);
 +#endif
          else if ((k = map_find(addr, 1))) { base=g_map[k-1].base; size=g_map[k-1].size; state=g_map[k-1].state; perm=3; }
@@ -3204,7 +3204,7 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
              }
              base=lo; size=hi-lo; state=0; perm=0; }
          else {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +            ss_external_query(addr, &base, &size, &state, &perm);
 +#else
              // 地址落在「当前宿主线程的栈」里：回报整段栈（状态 0xB = 栈）。SDK 初始化主线程记录时拿当时的 sp 查这里，把回报的区间当主线程栈；
@@ -3222,7 +3222,7 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
          regs[0] = 0; regs[1] = 0; return 0;
      }
      case 0x2C: case 0x2D: {  // MapPhysicalMemory / UnmapPhysicalMemory(addr, size)：只许在 alias 区内（SDK 的 VammManager 用） | MapPhysicalMemory / UnmapPhysicalMemory(addr, size): only allowed inside the alias region (used by the SDK's VammManager)
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        regs[0] = ss_physical_memory(regs[0], regs[1], num == 0x2c);
 +        return regs[0];
 +#else
@@ -3243,15 +3243,15 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
          case I_RandomEntropy: { uint64_t dm_entropy64(void); v = dm_entropy64(); break; }   // DM_DETCLOCK 开时为确定流（hle_os.c） | a deterministic stream when DM_DETCLOCK is on (hle_os.c)
 -        case I_ProgramId: v = 0x0100726014352000ull; break;
 +        case I_ProgramId:
-+#ifdef NITENPHONE_SWITCH_RUNTIME
-+            v = NITEN_GAME_TITLE_ID;
++#ifdef TOUCHABLE_SWITCH_RUNTIME
++            v = TOUCHABLE_GAME_TITLE_ID;
 +#else
 +            v = 0x0100726014352000ull;
 +#endif
 +            break;
          case I_IsApplication: v = 1; break;
          case I_UserExcAddr: v = 0; break;
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        case 24: { void thr_counts(int *, int *, int *); int handles, live, objects;
 +            thr_counts(&handles, &live, &objects); v = objects < 128 ? 128 - objects : 0; break; }
 +        case 28: v = 0; break;    // No extra alias region.
@@ -3263,21 +3263,21 @@ index b4635b145176cc037566a5e7a2d6d649cdf0a081..841ea12f5040b5ce8203d5906acfa4fe
          regs[0] = 0; regs[1] = v; return 0;
      }
      default:
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        die("Unsupported SVC %#x x0=%#llx x1=%#llx x2=%#llx", num, regs[0], regs[1], regs[2]);
 +#endif
          if (!g_seen[num & 0xff]) { g_seen[num & 0xff] = 1; LOG("SVC %#x x0=%#llx x1=%#llx x2=%#llx (占位返回成功)", num, regs[0], regs[1], regs[2]); }
          regs[0] = 0; return 0;
      }
 diff --git a/dm/host/hle_thread.c b/dm/host/hle_thread.c
-index f4bb7652418710618f8785fcef5acf8964f7fbab..404a24b5032f2f8c0bb32206ce59c09ad70314fa 100644
+index f4bb7652418710618f8785fcef5acf8964f7fbab..b415a57cfef97a4319d527cb05466e8d529ac928 100644
 --- a/dm/host/hle_thread.c
 +++ b/dm/host/hle_thread.c
 @@ -55,6 +55,10 @@ typedef struct thr {
      uint64_t nsvc;             // SVC 次数（现场导出用） | SVC count (for the state dump)
      mach_port_t mport;         // 宿主线程端口（取 CPU 时间） | Host thread port (to get CPU time)
      uint32_t qos;
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    int ss_suspended, ss_sleep;
 +    uint64_t *ss_tsd;
 +#endif
@@ -3288,7 +3288,7 @@ index f4bb7652418710618f8785fcef5acf8964f7fbab..404a24b5032f2f8c0bb32206ce59c09a
      t->mport = pthread_mach_thread_np(pthread_self());
      crash_thread_init();
      guest_thread_init();
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    uintptr_t tsd; __asm__("mrs %0, tpidrro_el0" : "=r"(tsd));
 +    t->ss_tsd = (uint64_t *)(tsd & ~(uintptr_t)7);
 +#endif
@@ -3299,7 +3299,7 @@ index f4bb7652418710618f8785fcef5acf8964f7fbab..404a24b5032f2f8c0bb32206ce59c09a
      thr_t *t = calloc(1, sizeof *t);
      pthread_cond_init(&t->cv, NULL);
      t->started = 1; t->prio = 44; t->core = 0; t->mask = 7; t->pt = pthread_self(); t->mport = pthread_mach_thread_np(t->pt);
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    uintptr_t tsd; __asm__("mrs %0, tpidrro_el0" : "=r"(tsd));
 +    t->ss_tsd = (uint64_t *)(tsd & ~(uintptr_t)7);
 +#endif
@@ -3310,14 +3310,14 @@ index f4bb7652418710618f8785fcef5acf8964f7fbab..404a24b5032f2f8c0bb32206ce59c09a
      }
  }
  
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +#include "ss_thread_suspend.inc"
 +#endif
  int svc_thread(int num, uint64_t *regs) {
      { thr_t *me = pthread_getspecific(g_keythr); if (me) { me->last_svc = num; me->last_lr = regs[30]; me->nsvc++; } }
      if (g_flag.thr && num != 0x0B) { thr_t *me = pthread_getspecific(g_keythr); LOG("[%#x] svc %#x x0=%#llx x1=%#llx x2=%#llx x3=%#llx", me ? me->handle : 0, num, regs[0], regs[1], regs[2], regs[3]); }
      switch (num) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +    case 0x32: regs[0] = ss_set_thread_activity((uint32_t)regs[0], (uint32_t)regs[1]); return 1;
 +    case 0x33: regs[0] = ss_get_thread_context((void *)regs[0], (uint32_t)regs[1]); return 1;
 +#endif
@@ -3330,7 +3330,7 @@ index f4bb7652418710618f8785fcef5acf8964f7fbab..404a24b5032f2f8c0bb32206ce59c09a
          uint64_t t0 = g_flag.bootprof ? now_ns() : 0;
 -        if (ns > 0 && dm_detclock_enabled()) {
 +        int det_sleep = ns > 0 && dm_detclock_enabled();
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        /* Sleep and yield hold no host service locks. GC can stop this thread here.
 +           Clearing under G keeps the marked region stable during suspension. */
 +        ss_set_thread_sleep(1);
@@ -3343,14 +3343,14 @@ index f4bb7652418710618f8785fcef5acf8964f7fbab..404a24b5032f2f8c0bb32206ce59c09a
              if (me && me->handle == 0x1001) { uint64_t y0 = now_ns(); sched_yield(); g_main_yield_ns += now_ns() - y0; g_main_yield_n++; }
              else sched_yield();
          }
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        ss_set_thread_sleep(0);
 +#endif
          if (g_flag.bootprof) { uint64_t d = now_ns() - t0; dm_prof_add(PROF_SLEEP, d, 0); thr_t *me = pthread_getspecific(g_keythr); if (me && me->handle == 0x1001) dm_prof_add(PROF_MAIN_WAIT, d, 0); }
          return 1;
      }
 diff --git a/dm/host/loader.c b/dm/host/loader.c
-index 0032333b822763ef152ddb1b92af2b5631f2398f..4685597ec5a646c08d46fadd52ebaef9a7444602 100644
+index 0032333b822763ef152ddb1b92af2b5631f2398f..b16f1ea1fb6c4b0f145f7b8d6f959c21ba24042e 100644
 --- a/dm/host/loader.c
 +++ b/dm/host/loader.c
 @@ -18,7 +18,7 @@ pthread_key_t g_key18, g_keytls, g_keytlr, g_keygate;
@@ -3380,7 +3380,7 @@ index 0032333b822763ef152ddb1b92af2b5631f2398f..4685597ec5a646c08d46fadd52ebaef9
      for (unsigned i = 0; i < g_nforce; i++)
 -        if (!g_force_hits[i]) { LOG("强制接管条目无任何引用：%s", g_force[i].name); bad = 1; }
 +        if (!g_force_hits[i]) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +            if (g_flag.imports) LOG("Unused optional host interface: %s", g_force[i].name);
 +#else
 +            LOG("强制接管条目无任何引用：%s", g_force[i].name); bad = 1;
@@ -3405,7 +3405,7 @@ index 0032333b822763ef152ddb1b92af2b5631f2398f..4685597ec5a646c08d46fadd52ebaef9
      }
      int cnt[3] = {0};
 +    if (relrsz) {
-+#ifdef NITENPHONE_SWITCH_RUNTIME
++#ifdef TOUCHABLE_SWITCH_RUNTIME
 +        extern int ss_apply_relr(uint8_t *, size_t, size_t, uint64_t, uint64_t, size_t *);
 +        size_t count = 0;
 +        if (relrent != 8 || ss_apply_relr(m->base, m->size,

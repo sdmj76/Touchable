@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check the game's resolution, render texture, and perspective paths.
 
-Run with .nitenphone/venv/bin/python internal/games/silksong/tests/test_world_projection.py. The checks execute
+Run with .touchable/venv/bin/python internal/games/silksong/tests/test_world_projection.py. The checks execute
 instructions from the pinned game. Unity allocation and API calls are mocked.
 They cannot replace the live camera and image checks on the phone.
 """

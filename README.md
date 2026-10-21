@@ -22,6 +22,8 @@ Every supported game gets these improvements:
 | Rhythm Heaven | v0 (nsp) | Touch controls adapted to each level; fewer on-screen buttons that cover less of the picture; more intuitive play and feedback; ambient border glow |
 | Silksong | v0 (nsp) + v655360 (nsp) | Adaptive screen size; full resolution; 120 Hz on ProMotion screens |
 
+See the [screenshots](SCREENSHOTS.md).
+
 ## Get started
 
 1. Install the full Xcode and sign in to your Apple Account in Xcode.

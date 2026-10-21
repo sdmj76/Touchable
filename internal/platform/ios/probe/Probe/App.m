@@ -14,7 +14,7 @@
     UILabel *label = [UILabel new];
     label.numberOfLines = 0;
     label.font = [UIFont monospacedSystemFontOfSize:16 weight:UIFontWeightRegular];
-    label.text = @"Nitenphone CPU Test\n\nRunning…";
+    label.text = @"Touchable CPU Test\n\nRunning…";
     label.translatesAutoresizingMaskIntoConstraints = NO;
     [controller.view addSubview:label];
     [NSLayoutConstraint activateConstraints:@[
@@ -37,7 +37,7 @@
         puts(output);
         fflush(stdout);
         dispatch_async(dispatch_get_main_queue(), ^{
-            label.text = [@"Nitenphone CPU Test\n\n" stringByAppendingString:report];
+            label.text = [@"Touchable CPU Test\n\n" stringByAppendingString:report];
             label.textColor = result ? UIColor.systemRedColor : UIColor.labelColor;
             UIApplication.sharedApplication.idleTimerDisabled = NO;
         });

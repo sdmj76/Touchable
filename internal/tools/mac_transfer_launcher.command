@@ -33,20 +33,20 @@ if ! xcrun --sdk iphoneos --show-sdk-path >/dev/null 2>&1; then
     echo 'Select the Command Line Tools in Xcode Settings > Locations.' >&2
     exit 1
 fi
-if [[ ! -x .nitenphone/venv/bin/python ]]; then
+if [[ ! -x .touchable/venv/bin/python ]]; then
     echo 'Creating the local Python environment. No Python packages are downloaded.'
-    xcrun python3 -m venv --without-pip .nitenphone/venv
+    xcrun python3 -m venv --without-pip .touchable/venv
 fi
-.nitenphone/venv/bin/python -c 'import sys; assert sys.version_info >= (3, 9), "Python 3.9 or later is required."'
+.touchable/venv/bin/python -c 'import sys; assert sys.version_info >= (3, 9), "Python 3.9 or later is required."'
 echo 'Checking the transfer files.'
-.nitenphone/venv/bin/python internal/tools/verify_mac_transfer.py --game "$TRANSFER_GAME"
-.nitenphone/venv/bin/python internal/tools/games.py check --game "$TRANSFER_GAME"
+.touchable/venv/bin/python internal/tools/verify_mac_transfer.py --game "$TRANSFER_GAME"
+.touchable/venv/bin/python internal/tools/games.py check --game "$TRANSFER_GAME"
 echo 'Generating the Xcode project for the paths on this Mac.'
-.nitenphone/venv/bin/python internal/tools/prepare_ios.py --game "$TRANSFER_GAME"
+.touchable/venv/bin/python internal/tools/prepare_ios.py --game "$TRANSFER_GAME"
 echo
 echo 'In Xcode, select the original development team.'
 echo 'Connect the iPhone and select it as the run destination.'
 echo 'Keep the existing Bundle ID.'
 if [[ "$TRANSFER_MODE" != '--check-only' ]]; then
-    open -a Xcode ".nitenphone/build/games/$TRANSFER_GAME/ios-project/$TRANSFER_PRODUCT.xcodeproj"
+    open -a Xcode ".touchable/build/games/$TRANSFER_GAME/ios-project/$TRANSFER_PRODUCT.xcodeproj"
 fi

@@ -27,14 +27,14 @@ class LauncherTests(unittest.TestCase):
     def test_local_identity_is_separate_from_source_manifest(self):
         game = load_game('one-game', self.code)
         original = game.manifest_path.read_bytes()
-        launcher.write_json(self.root / '.nitenphone/config.json', {
+        launcher.write_json(self.root / '.touchable/config.json', {
             'games': {'one-game': {'bundle_id': 'dev.example.one-game'}}})
         changed = load_game('one-game', self.code)
         self.assertEqual(changed.bundle_id, 'dev.example.one-game')
         self.assertEqual(changed.manifest_path.read_bytes(), original)
         self.assertEqual(changed.ipa_dir, self.root / 'IPA/one-game')
-        self.assertEqual(changed.work_dir, self.root / '.nitenphone/work/one-game')
-        self.assertEqual(changed.save_dir, self.root / '.nitenphone/saves/one-game/one-game')
+        self.assertEqual(changed.work_dir, self.root / '.touchable/work/one-game')
+        self.assertEqual(changed.save_dir, self.root / '.touchable/saves/one-game/one-game')
 
     def test_unknown_game_cannot_build_or_install(self):
         game = load_game('one-game', self.code)

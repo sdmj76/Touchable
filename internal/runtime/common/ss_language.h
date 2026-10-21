@@ -21,7 +21,8 @@ static inline const char *ss_switch_language(const char *tag) {
         p = dash + 1;
     }
     const char *language = parts[0];
-    if (!strcasecmp(language, "zh") || !strcasecmp(language, "cmn") ||
+    int cantonese = !strcasecmp(language, "yue");
+    if (cantonese || !strcasecmp(language, "zh") || !strcasecmp(language, "cmn") ||
         !strcasecmp(language, "wuu") || !strcasecmp(language, "hak") ||
         !strcasecmp(language, "nan")) {
         /* The script subtag selects the written form. A region alone is only a fallback.
@@ -33,9 +34,9 @@ static inline const char *ss_switch_language(const char *tag) {
         for (int i = 1; i < count; ++i)
             if (!strcasecmp(parts[i], "tw") || !strcasecmp(parts[i], "hk") ||
                 !strcasecmp(parts[i], "mo")) return "zh-Hant";
-        return "zh-Hans";
+        /* Cantonese without a script subtag is usually written in Traditional Chinese. */
+        return cantonese ? "zh-Hant" : "zh-Hans";
     }
-    if (!strcasecmp(language, "yue")) return "zh-Hant";
     if (!strcasecmp(language, "ja")) return "ja";
     if (!strcasecmp(language, "ko")) return "ko";
     if (!strcasecmp(language, "de")) return "de";

@@ -13,7 +13,7 @@ WorkspaceError = GameError
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = ROOT.parent
-LOCAL_ROOT = PROJECT_ROOT / '.nitenphone'
+LOCAL_ROOT = PROJECT_ROOT / '.touchable'
 DEPENDENCIES = LOCAL_ROOT / 'dependencies'
 UPSTREAM = DEPENDENCIES / 'd2r-mobile'
 PYTHON = LOCAL_ROOT / 'venv/bin/python'
@@ -25,13 +25,13 @@ def project_root(root=ROOT):
 
 
 def state_root(root=ROOT):
-    if Path(root).resolve() == ROOT and os.environ.get('NITENPHONE_STATE_DIR'):
-        return Path(os.environ['NITENPHONE_STATE_DIR']).expanduser().resolve()
-    return project_root(root) / '.nitenphone'
+    if Path(root).resolve() == ROOT and os.environ.get('TOUCHABLE_STATE_DIR'):
+        return Path(os.environ['TOUCHABLE_STATE_DIR']).expanduser().resolve()
+    return project_root(root) / '.touchable'
 
 
 def read_local_config(root=ROOT):
-    path = project_root(root) / '.nitenphone/config.json'
+    path = project_root(root) / '.touchable/config.json'
     if not path.exists():
         return {'schema_version': 1, 'games': {}}
     return _read_json(path, 'Local settings')

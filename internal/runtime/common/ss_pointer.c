@@ -1,12 +1,14 @@
 #include "ss_pointer.h"
 #include <math.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <string.h>
 #include <time.h>
 
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static ss_pointer_frame current;
 static uint64_t generation, published_at;
+static _Atomic uint64_t wait_hold = SS_POINTER_WAIT_HOLD_NS;
 static ss_pointer_event queue[32];
 static unsigned queued;
 
@@ -41,6 +43,17 @@ int ss_pointer_read(ss_pointer_frame *frame) {
     pthread_mutex_unlock(&lock);
     return valid;
 }
+int ss_pointer_controls(void) {
+    uint64_t now = time_ns();
+    pthread_mutex_lock(&lock);
+    uint64_t age = now - published_at;
+    int mode = published_at ? current.mode : SS_POINTER_NONE, result = SS_CONTROLS_SHOW;   /* no frame: the default */
+    if (mode == SS_POINTER_WAIT) result = age <= wait_hold ? SS_CONTROLS_HIDE : SS_CONTROLS_SHOW;
+    else if (mode != SS_POINTER_NONE && age > 250000000ull && age <= SS_POINTER_GAP_HOLD_NS) result = SS_CONTROLS_KEEP;
+    pthread_mutex_unlock(&lock);
+    return result;
+}
+void ss_pointer_set_wait_hold(uint64_t ns) { wait_hold = ns; }
 void ss_pointer_clear(void) {
     pthread_mutex_lock(&lock);
     current = (ss_pointer_frame){0};

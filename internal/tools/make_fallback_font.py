@@ -10,7 +10,7 @@ import struct
 
 ROOT = Path(__file__).resolve().parents[1]
 UNITS = 1000
-NAME = 'NitenphoneFallback'
+NAME = 'TouchableFallback'
 
 
 def checksum(data):

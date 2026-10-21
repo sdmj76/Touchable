@@ -100,7 +100,7 @@ This package does not contain the original NSP, keys, signing certificates, prov
 4. Wait for the file check to complete.
 5. Wait for Xcode to open the project.
 
-The script creates a local `.nitenphone/venv` with the Python that Xcode supplies.
+The script creates a local `.touchable/venv` with the Python that Xcode supplies.
 The script uses only the Python standard library.
 The script does not download dependencies. It does not extract the game again, rewrite the modules again, or compile the shaders again.
 The script generates the project for the new paths. If you move the extracted folder, run the script again.
@@ -224,7 +224,7 @@ def main():
         launch_path.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
         write_readme(game, root)
         # Keep the selected local identity. Do not copy account or certificate settings.
-        local_config = root / '.nitenphone/config.json'
+        local_config = root / '.touchable/config.json'
         local_config.parent.mkdir(parents=True, exist_ok=True)
         local_config.write_text(json.dumps({'schema_version': 1, 'games': {
             game.id: {'bundle_id': game.bundle_id}}}, indent=2) + '\n')

@@ -25,7 +25,7 @@ void ss_display_set_hz(int hz);
    rate that the screen gives: 60 Hz in Low Power Mode, when the device is hot, or on a 60 Hz screen. */
 static int displayHzWanted = 60;
 
-/* TV mode is an optional per-game feature. NitenTVModeToggle in Info.plist enables it. The
+/* TV mode is an optional per-game feature. TouchableTVModeToggle in Info.plist enables it. The
    launch mode is saved in NSUserDefaults. The game reads DM_OPMODE at start-up. */
 static BOOL tvModeToggle, tvModeOn;
 
@@ -61,7 +61,7 @@ static void noteControllerKeys(uint64_t keys) {
 }
 
 static NSString *gameName(void) {
-    return [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Nitenphone";
+    return [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Touchable";
 }
 
 void *front_metal_layer(void) { return (__bridge void *)gameLayer; }
@@ -119,12 +119,97 @@ static void updateInput(void) {
 @property(nonatomic) CGFloat hitMargin;   /* round touch area outside the button; 0 keeps the frame */
 @property(nonatomic, copy) UIButtonConfiguration *look;   /* the glass look of a rhythm button */
 @property(nonatomic, readonly) BOOL glassShown;
+@property(nonatomic) BOOL slides;   /* a finger can slide from this button onto another sliding button */
+@property(nonatomic, weak) PadButton *slideTarget;   /* the button that this button's touch now holds */
+@property(nonatomic) BOOL untracked;   /* a slide ended UIKit's tracking of this button's touch */
+@property(nonatomic) BOOL keepPress;   /* the game input keeps this button while UIKit's tracking ends */
+@property(nonatomic) BOOL slideHeld;   /* a slide holds this button, so it shows the drawn mark */
+@property(nonatomic, strong) UIView *slideMark;
+@property(nonatomic) CGRect homeFrame, mapFrame;   /* the frames in the pad and on the zoomed map */
 @end
 @implementation PadButton
+/* A touch stays with the button where it started. That button stays pressed until the finger lifts.
+   A slide also presses another sliding button when the finger enters its touch area, and releases the
+   button of the previous slide. The touch areas do not overlap, so the touch holds the first button and
+   at most one more. A slide back to the first button holds only that button. A button that another
+   finger holds does not take the press. */
+- (PadButton *)slideButtonFor:(UITouch *)touch {
+    for (UIView *view in self.superview.subviews) {
+        if (![view isKindOfClass:PadButton.class]) continue;
+        PadButton *button = (PadButton *)view;
+        if (button.slides && !button.hidden && button.userInteractionEnabled && [button pointInside:[touch locationInView:button] withEvent:nil])
+            return button;
+    }
+    return nil;
+}
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = touches.anyObject;
+    PadButton *current = self.slideTarget ?: self;
+    if (self.slides && touch && ![current pointInside:[touch locationInView:current] withEvent:event]) {
+        PadButton *next = [self slideButtonFor:touch];
+        if (next && next != current && (next == self || !next.highlighted)) {
+            /* UIKit shows the system press look only on the button that tracks the touch.
+               The first slide ends that tracking. Each button that a slide holds shows a drawn mark. */
+            if (!self.untracked) {
+                self.untracked = YES;
+                self.keepPress = YES;
+                [super touchesCancelled:touches withEvent:event];
+                self.keepPress = NO;
+                UIButtonConfiguration *config = self.configuration;   /* a new glass background ends the press look */
+                self.configuration = nil;
+                self.configuration = config;
+                self.slideHeld = YES;
+                self.highlighted = YES;   /* the cancel released the first button */
+            }
+            if (current != self) current.highlighted = NO;
+            if (next != self) {
+                next.slideHeld = YES;
+                next.highlighted = YES;
+            }
+            self.slideTarget = next == self ? nil : next;
+            if (getenv("SS_SLIDE_TRACE")) fprintf(stderr, "Touch slide: %s to %s\n", current.accessibilityLabel.UTF8String, next.accessibilityLabel.UTF8String);
+            current = next;
+        }
+    }
+    if (!self.untracked) [super touchesMoved:touches withEvent:event];
+}
+- (void)releaseSlide {
+    PadButton *target = self.slideTarget;
+    self.slideTarget = nil;
+    if (target.highlighted) target.highlighted = NO;
+}
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    self.untracked = NO;
+    [super touchesBegan:touches withEvent:event];
+}
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    [self releaseSlide];
+    if (self.untracked) self.highlighted = NO;
+    else [super touchesEnded:touches withEvent:event];
+}
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    [self releaseSlide];
+    if (self.untracked) self.highlighted = NO;
+    else [super touchesCancelled:touches withEvent:event];
+}
+/* The mark of a button that a slide holds: a white fill, as bright as the lit D-pad arm (DPAD_LIT_FILL). */
+- (void)showSlideMark:(BOOL)shown {
+    if (shown && !self.slideMark) {
+        self.slideMark = [UIView new];
+        self.slideMark.userInteractionEnabled = NO;
+        self.slideMark.backgroundColor = [UIColor colorWithWhite:1 alpha:0.2];
+        [self addSubview:self.slideMark];
+    }
+    self.slideMark.frame = self.bounds;
+    self.slideMark.layer.cornerRadius = self.bounds.size.width / 2;
+    self.slideMark.hidden = !shown;
+}
+/* The touch area is the drawn circle or capsule, widened by hitMargin on each side. */
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
     if (self.hitMargin <= 0) return [super pointInside:point withEvent:event];
-    CGFloat radius = self.bounds.size.width / 2;
-    return hypot(point.x - radius, point.y - self.bounds.size.height / 2) <= radius + self.hitMargin;
+    CGSize size = self.bounds.size;
+    CGFloat radius = size.height / 2, x = fmin(fmax(point.x, radius), fmax(size.width - radius, radius));
+    return hypot(point.x - x, point.y - radius) <= radius + self.hitMargin;
 }
 - (BOOL)glassShown { return !self.look || (!self.appearanceHidden && !self.faded); }
 /* Apple's HIG: an alpha below 1 breaks glass. A hidden or faded rhythm button uses a plain look instead. */
@@ -166,14 +251,17 @@ static void updateInput(void) {
     if (value && self.hidden) value = NO;   /* a touch that started before the button hid */
     BOOL was = self.highlighted;
     [super setHighlighted:value];
+    if (!value) self.slideHeld = NO;
+    if (self.slideHeld || self.slideMark) [self showSlideMark:self.slideHeld];
     if (value && !was) notePress(self.bit);
-    if (value) touchButtons |= self.bit; else touchButtons &= ~self.bit;
+    if (value) touchButtons |= self.bit; else if (!self.keepPress) touchButtons &= ~self.bit;
     if (value != was && getenv("RH_MENU_TRACE") && (self.bit & ((1ull << 1) | (1ull << 3) | (1ull << 10) | (1ull << 11))))
         fprintf(stderr, "Touch button %s: %s mask %#llx\n", self.accessibilityLabel.UTF8String, value ? "down" : "up", (unsigned long long)self.bit);
     updateInput();
 }
 - (void)setHidden:(BOOL)hidden {
     if (hidden && self.highlighted) self.highlighted = NO;
+    if (hidden) [self releaseSlide];
     [super setHidden:hidden];
 }
 @end
@@ -219,9 +307,9 @@ static UIVisualEffectView *glassView(void) {
 }
 @end
 
-/* A pressed D-pad arm: a white fill and a soft white glow. The user found the build 17 values (0.32 fill, 0.9 glow) too bright. */
+/* A pressed D-pad arm: a white light inside the glass arm. The user found the build 17 values (0.32 fill,
+   0.9 glow) too bright. A glow outside the glass did not match the arm shape, so the arm has none. */
 #define DPAD_LIT_FILL 0.2
-#define DPAD_LIT_GLOW 0.5
 /* Sizes of the D-pad parts, as fractions of its width. */
 typedef struct { CGFloat center, arm, reach; } dpad_shape;
 static dpad_shape dpadShape(CGFloat size) { return (dpad_shape){size / 2, round(size * 0.17), round(size * 0.42)}; }
@@ -245,22 +333,31 @@ static dpad_shape dpadShape(CGFloat size) { return (dpad_shape){size / 2, round(
     CGContextSetLineWidth(g, 1);
     CGContextSetStrokeColorWithColor(g, [UIColor colorWithWhite:1 alpha:0.18].CGColor);
     CGContextStrokeEllipseInRect(g, CGRectInset(self.bounds, 0.5, 0.5));
-    /* A pressed arm glows. A diagonal lights two arms. */
+    /* A pressed arm lights inside the glass. The light has the shape of the glass bar, so it stays
+       inside the glass edge. It starts at the other bar and fades in, so the place where the bars meet
+       has no hard edge. A diagonal lights two arms, and the center stays unlit. */
     const unsigned bits[4] = {SS_DPAD_LEFT, SS_DPAD_UP, SS_DPAD_RIGHT, SS_DPAD_DOWN};
-    const CGRect arms[4] = {CGRectMake(c - r, c - h, r - h, 2 * h), CGRectMake(c - h, c - r, 2 * h, r - h),
-                            CGRectMake(c + h, c - h, r - h, 2 * h), CGRectMake(c - h, c + h, 2 * h, r - h)};
-    const UIRectCorner ends[4] = {UIRectCornerTopLeft | UIRectCornerBottomLeft, UIRectCornerTopLeft | UIRectCornerTopRight,
-                                  UIRectCornerTopRight | UIRectCornerBottomRight, UIRectCornerBottomLeft | UIRectCornerBottomRight};
-    CGContextSaveGState(g);
-    CGContextSetShadowWithColor(g, CGSizeZero, 12, [UIColor colorWithWhite:1 alpha:DPAD_LIT_GLOW].CGColor);
-    [[UIColor colorWithWhite:1 alpha:DPAD_LIT_FILL] setFill];
-    for (int i = 0; i < 4; ++i)
-        if (self.directions & bits[i])
-            [[UIBezierPath bezierPathWithRoundedRect:arms[i] byRoundingCorners:ends[i] cornerRadii:CGSizeMake(h, h)] fill];
-    CGContextRestoreGState(g);
+    const CGPoint out[4] = {{-1, 0}, {0, -1}, {1, 0}, {0, 1}};
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceGray();
+    const CGFloat light[] = {1, 0, 1, DPAD_LIT_FILL, 1, DPAD_LIT_FILL};
+    const CGFloat stops[] = {0, 0.35, 1};
+    CGGradientRef gradient = CGGradientCreateWithColorComponents(space, light, stops, 3);
+    for (int i = 0; i < 4; ++i) {
+        if (!(self.directions & bits[i])) continue;
+        CGPoint e = out[i];
+        CGRect bar = e.x ? CGRectMake(c - r, c - h, 2 * r, 2 * h) : CGRectMake(c - h, c - r, 2 * h, 2 * r);
+        CGRect arm = CGRectMake(e.x < 0 ? c - r : e.x > 0 ? c + h : c - h, e.y < 0 ? c - r : e.y > 0 ? c + h : c - h,
+                                e.x ? r - h : 2 * h, e.y ? r - h : 2 * h);
+        CGContextSaveGState(g);
+        [[UIBezierPath bezierPathWithRoundedRect:bar cornerRadius:h] addClip];
+        CGContextClipToRect(g, arm);
+        CGContextDrawLinearGradient(g, gradient, CGPointMake(c + e.x * h, c + e.y * h), CGPointMake(c + e.x * r, c + e.y * r), 0);
+        CGContextRestoreGState(g);
+    }
+    CGGradientRelease(gradient);
+    CGColorSpaceRelease(space);
     /* An arrow in each arm points out from the center. */
     CGFloat a = round(s * 0.07), at = r - a * 1.6;
-    const CGPoint out[4] = {{-1, 0}, {0, -1}, {1, 0}, {0, 1}};
     for (int i = 0; i < 4; ++i) {
         CGPoint e = out[i], tip = CGPointMake(c + e.x * (at + a * 0.6), c + e.y * (at + a * 0.6));
         CGPoint base = CGPointMake(c + e.x * (at - a * 0.4), c + e.y * (at - a * 0.4));
@@ -700,7 +797,7 @@ static NSString *buttonSymbol(int button) {
 @end
 
 static NSString *touchLayout(void) {
-    return [NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenTouchLayout"] ?: @"switch";
+    return [NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableTouchLayout"] ?: @"switch";
 }
 
 /* Return the displayed game rectangle. Present uses the same 16:9 fit. */
@@ -725,7 +822,7 @@ static CGRect gameRect(CGSize size) {
 @end
 
 static void *runGame(void *unused) {
-    @autoreleasepool { pthread_setname_np("Nitenphone main"); ss_host_run(moduleDirectory.fileSystemRepresentation); }
+    @autoreleasepool { pthread_setname_np("Touchable main"); ss_host_run(moduleDirectory.fileSystemRepresentation); }
     return NULL;
 }
 
@@ -742,10 +839,17 @@ static void *runGame(void *unused) {
 @property(nonatomic) BOOL rhythmLayout;
 @property(nonatomic, strong) PointerView *pointerView;
 @property(nonatomic, strong) PadButton *backButton;
+@property(nonatomic, strong) PadButton *skipButton;   /* A in a cutscene that the game can skip */
 @property(nonatomic, strong) UIButton *padToggle;
 @property(nonatomic, strong) UIButton *tvModeButton;   /* shown outside levels */
 @property(nonatomic) BOOL padInMenu;      /* the player showed the pad in a touch menu */
 @property(nonatomic) BOOL touchMenu;      /* the pad is hidden for a touch menu */
+@property(nonatomic) BOOL menuFrame;      /* the game shows a menu that takes touches */
+@property(nonatomic) BOOL cutsceneFrame;  /* the game plays a cutscene */
+@property(nonatomic) BOOL skipAvailable;  /* the cutscene frame has a skip target */
+@property(nonatomic) BOOL mapFrame;       /* the game shows the zoomed map, which takes drags */
+@property(nonatomic) BOOL mapPad;         /* the map shows only Y and A at the left edge, and X and B at the right edge */
+@property(nonatomic) BOOL loadingScreen;  /* a loading screen: all touch controls are hidden */
 @property(nonatomic) int pointerMode;
 @property(nonatomic) BOOL levelControlsVisible;
 @property(nonatomic) BOOL loggedControls;
@@ -823,6 +927,7 @@ static void *runGame(void *unused) {
         button.bit = 1ull << bits[i];
         setGlassButton(button, glassButtonConfiguration());   /* the Switch title follows the layout size */
         button.accessibilityLabel = names[i];
+        button.slides = !self.rhythmLayout && i < 4;   /* A, B, X, Y */
         if (self.rhythmLayout) {
             button.look = rhythmGlassConfiguration(names[i], i < 4 ? arrows[i] : nil);
             button.appearanceHidden = i < 4;
@@ -834,13 +939,18 @@ static void *runGame(void *unused) {
         self.backButton = [PadButton buttonWithType:UIButtonTypeCustom];
         self.backButton.bit = 1ull << SS_BUTTON_B;
         self.backButton.accessibilityLabel = @"Back";
+        self.skipButton = [PadButton buttonWithType:UIButtonTypeCustom];
+        self.skipButton.bit = 1ull << SS_BUTTON_A;
+        self.skipButton.accessibilityLabel = @"Skip";
         self.padToggle = [UIButton buttonWithType:UIButtonTypeCustom];
         self.padToggle.accessibilityLabel = @"Virtual controller";
         [self.padToggle addTarget:self action:@selector(togglePad) forControlEvents:UIControlEventTouchUpInside];
         [self styleMenuControl:self.backButton symbol:@"chevron.backward" selected:nil];
+        [self styleMenuControl:self.skipButton symbol:@"forward.end.fill" selected:nil];
         [self styleMenuControl:self.padToggle symbol:@"gamecontroller" selected:@"gamecontroller.fill"];
-        self.backButton.hidden = self.padToggle.hidden = YES;
+        self.backButton.hidden = self.skipButton.hidden = self.padToggle.hidden = YES;
         [controls addSubview:self.backButton];
+        [controls addSubview:self.skipButton];
         [controls addSubview:self.padToggle];
         /* Show the touch controls when the last real controller goes away. */
         [NSNotificationCenter.defaultCenter addObserverForName:GCControllerDidDisconnectNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) {
@@ -892,7 +1002,10 @@ static void *runGame(void *unused) {
 - (void)pollInput:(CADisplayLink *)link {
     [self followDisplayRate:link];
     [self.pointerView refresh];
-    if (self.leftZone) {
+    int controls = self.leftZone ? ss_pointer_controls() : SS_CONTROLS_SHOW;
+    if (self.leftZone && controls == SS_CONTROLS_KEEP) {
+        /* A short gap in the game's frames, for example a fade. Keep the controls as they are. */
+    } else if (self.leftZone) {
         ss_pointer_frame frame;
         BOOL hasPointer = ss_pointer_read(&frame);
         if (hasPointer && frame.mode == SS_POINTER_HINTS && self.pointerMode == SS_POINTER_MENU) pauseMenu = NO;
@@ -956,6 +1069,13 @@ static void *runGame(void *unused) {
         if (x.hidden == showX && getenv("RH_MENU_TRACE")) fprintf(stderr, "Touch X: %s\n", showX ? "shown" : "hidden");
         y.hidden = !showY;
         x.hidden = !showX;
+        /* A loading screen hides the visible controls. The transparent A area stays. */
+        [self noteLoadingScreen:controls == SS_CONTROLS_HIDE];
+        if (self.loadingScreen) {
+            for (NSUInteger i = 0; i < 4; ++i) self.buttons[i].hidden = YES;
+            y.hidden = x.hidden = YES;
+        }
+        for (NSUInteger i = 4; i < 7; ++i) self.buttons[i].hidden = self.loadingScreen;   /* B, -, + */
         [self updateDimming];
     } else {
         [self updateTouchMenu];
@@ -997,15 +1117,15 @@ static void *runGame(void *unused) {
     [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
     [alert addAction:[UIAlertAction actionWithTitle:@"切换" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-        id previous = [defaults objectForKey:@"NitenTVMode"];
-        [defaults setBool:target forKey:@"NitenTVMode"];
+        id previous = [defaults objectForKey:@"TouchableTVMode"];
+        [defaults setBool:target forKey:@"TouchableTVMode"];
         BOOL written = [defaults synchronize];
-        id savedValue = [defaults objectForKey:@"NitenTVMode"];
+        id savedValue = [defaults objectForKey:@"TouchableTVMode"];
         BOOL saved = written && [savedValue isKindOfClass:NSNumber.class] && [savedValue boolValue] == target;
         if (!saved) {
             /* Do not leave a value that the next launch could apply after a failed write. */
-            if (previous) [defaults setObject:previous forKey:@"NitenTVMode"];
-            else [defaults removeObjectForKey:@"NitenTVMode"];
+            if (previous) [defaults setObject:previous forKey:@"TouchableTVMode"];
+            else [defaults removeObjectForKey:@"TouchableTVMode"];
             [defaults synchronize];
             fprintf(stderr, "TV mode: save failed\n");
         } else {
@@ -1026,21 +1146,57 @@ static void *runGame(void *unused) {
     fprintf(stderr, "Touch menu: pad %s by the player\n", self.padInMenu ? "shown" : "hidden");
     [self updateTouchMenu];
 }
-/* A menu that takes touches hides the pad. Back sends B. The toggle shows the pad again
-   until the menu closes. A stale or missing frame keeps the pad. */
+/* Record a change of the loading screen state. */
+- (void)noteLoadingScreen:(BOOL)loading {
+    if (loading == self.loadingScreen) return;
+    self.loadingScreen = loading;
+    fprintf(stderr, "Touch loading: controls %s\n", loading ? "hidden" : "shown");
+}
+/* A menu that takes touches hides the pad. Back sends B. A cutscene also hides the pad; Skip sends A
+   when the game can skip the cutscene. The zoomed map keeps only Y and A (at the left edge), and X and B (at the right edge);
+   a drag moves the map. The toggle shows the pad again until the menu, the cutscene, or the map ends. A loading screen hides all controls. A short gap in the game's frames keeps the controls as
+   they are. Without frames from the game, the pad shows. */
 - (void)updateTouchMenu {
-    ss_pointer_frame frame;
-    BOOL menu = ss_pointer_read(&frame) && frame.mode == SS_POINTER_MENU;
-    if (!menu) self.padInMenu = NO;
-    BOOL touchMenu = menu && !self.padInMenu;
+    int controls = ss_pointer_controls();
+    if (controls != SS_CONTROLS_KEEP) {
+        ss_pointer_frame frame;
+        [self noteLoadingScreen:controls == SS_CONTROLS_HIDE];
+        BOOL hasFrame = !self.loadingScreen && ss_pointer_read(&frame);
+        self.menuFrame = hasFrame && frame.mode == SS_POINTER_MENU;
+        BOOL cutscene = hasFrame && frame.mode == SS_POINTER_CUTSCENE, skip = cutscene && frame.count > 0;
+        if (cutscene != self.cutsceneFrame || skip != self.skipAvailable)
+            fprintf(stderr, "Touch cutscene: %s\n", !cutscene ? "ended" : skip ? "skip shown" : "no skip");
+        self.cutsceneFrame = cutscene;
+        self.skipAvailable = skip;
+        self.mapFrame = hasFrame && frame.mode == SS_POINTER_MAP;
+    }
+    /* The pad stays hidden until the player shows it. The map keeps A, X, and B. */
+    BOOL padFrame = self.menuFrame || self.cutsceneFrame || self.mapFrame;
+    if (!padFrame) self.padInMenu = NO;
+    BOOL mapPad = self.mapFrame && !self.padInMenu;
+    BOOL touchMenu = padFrame && !self.padInMenu && !mapPad;
+    if (mapPad != self.mapPad) {
+        self.mapPad = mapPad;
+        for (NSNumber *index in @[@(SS_PAD_A), @(SS_PAD_B), @(SS_PAD_X), @(SS_PAD_Y)]) {
+            PadButton *button = self.buttons[index.unsignedIntegerValue];
+            if (button.highlighted) button.highlighted = NO;
+            button.frame = mapPad ? button.mapFrame : button.homeFrame;
+        }
+        fprintf(stderr, "Touch map: %s\n", mapPad ? "Y, A, X, and B only" : "pad as usual");
+    }
     if (touchMenu != self.touchMenu) {
         self.touchMenu = touchMenu;
         fprintf(stderr, "Touch menu: %s\n", touchMenu ? "pad hidden" : "pad shown");
     }
-    self.dpad.hidden = touchMenu || controllerInUse;
-    for (PadButton *button in self.buttons) button.hidden = touchMenu || controllerInUse;
-    self.backButton.hidden = !touchMenu || controllerInUse;
-    self.padToggle.hidden = !menu || controllerInUse;
+    BOOL hidden = self.loadingScreen || controllerInUse;
+    self.dpad.hidden = hidden || touchMenu || mapPad;
+    for (NSUInteger i = 0; i < self.buttons.count; ++i) {
+        BOOL mapButton = i == SS_PAD_A || i == SS_PAD_B || i == SS_PAD_X || i == SS_PAD_Y;
+        self.buttons[i].hidden = hidden || touchMenu || (mapPad && !mapButton);
+    }
+    self.backButton.hidden = hidden || !touchMenu || !self.menuFrame;
+    self.skipButton.hidden = hidden || !touchMenu || !self.skipAvailable;
+    self.padToggle.hidden = hidden || !padFrame;
     self.padToggle.selected = self.padInMenu;
     [self updateDimming];
 }
@@ -1050,12 +1206,16 @@ static void *runGame(void *unused) {
     NSMutableArray<UIView *> *views = [NSMutableArray array];
     if (self.dpad) [views addObject:self.dpad];
     if (self.backButton) [views addObject:self.backButton];
+    if (self.skipButton) [views addObject:self.skipButton];
     if (self.padToggle) [views addObject:self.padToggle];
     if (self.tvModeButton) [views addObject:self.tvModeButton];
     [views addObjectsFromArray:self.buttons];
     for (UIView *view in views) {
         BOOL glass = ![view isKindOfClass:PadButton.class] || ((PadButton *)view).glassShown;
-        if (!view.hidden && glass) CGPathAddEllipseInRect(path, NULL, view.frame);
+        if (!view.hidden && glass) {   /* a circle or a capsule */
+            CGFloat radius = fmin(view.frame.size.width, view.frame.size.height) / 2;
+            CGPathAddRoundedRect(path, NULL, view.frame, radius, radius);
+        }
     }
     if (!CGPathEqualToPath(path, self.dimming.path)) {
         [CATransaction begin];
@@ -1073,7 +1233,7 @@ static void *runGame(void *unused) {
     self.metalView.frame = self.view.bounds;
     self.pointerView.frame = self.view.bounds;
     gameLayer.drawableSize = CGSizeMake(render.width, render.height);
-    if ([[NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenNativeDrawable"] boolValue]) {
+    if ([[NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableNativeDrawable"] boolValue]) {
         CGFloat scale = self.view.window.windowScene.screen.nativeScale ?: self.traitCollection.displayScale;
         gameLayer.drawableSize = CGSizeMake(round(size.width * scale), round(size.height * scale));
     }
@@ -1145,7 +1305,20 @@ static void *runGame(void *unused) {
     for (NSUInteger i = 0; i < self.buttons.count && i < SS_PAD_BUTTONS; ++i) {
         ss_pad_circle c = pad.buttons[i];
         PadButton *button = self.buttons[i];
-        button.frame = CGRectMake(c.x - c.size / 2, c.y - c.size / 2, c.size, c.size);
+        CGFloat w = ss_pad_width(c);   /* ZL, L, R, and ZR are capsules */
+        button.frame = CGRectMake(c.x - w / 2, c.y - c.size / 2, w, c.size);
+        /* The zoomed map moves Y above A at the left edge, and X above B at the right edge. The edges
+           are those of − and +. A and B keep the height of B. The upper button is just clear of the
+           lower button's touch area. */
+        button.homeFrame = button.frame;
+        if (i == SS_PAD_A || i == SS_PAD_B || i == SS_PAD_X || i == SS_PAD_Y) {
+            ss_pad_circle minus = pad.buttons[SS_PAD_MINUS], plus = pad.buttons[SS_PAD_PLUS];
+            BOOL leftEdge = i == SS_PAD_A || i == SS_PAD_Y, upper = i == SS_PAD_X || i == SS_PAD_Y;
+            CGFloat x = leftEdge ? minus.x - minus.size / 2 : plus.x + plus.size / 2 - c.size;
+            CGFloat y = pad.buttons[SS_PAD_B].y - (upper ? c.size + 2 * pad.hit_margin + 6 : 0) - c.size / 2;
+            button.mapFrame = CGRectMake(x, y, c.size, c.size);
+            if (self.mapPad) button.frame = button.mapFrame;
+        }
         button.hitMargin = pad.hit_margin;
         if (titleSize != self.titleSize) {
             UIButtonConfiguration *config = button.configuration;
@@ -1154,13 +1327,14 @@ static void *runGame(void *unused) {
         }
     }
     self.titleSize = titleSize;
-    const ss_pad_circle menuControls[] = {pad.back, pad.pad_toggle};
-    UIButton *menuButtons[] = {self.backButton, self.padToggle};
-    for (int i = 0; i < 2; ++i) {
+    /* Skip takes the place of +, which a cutscene hides. */
+    const ss_pad_circle menuControls[] = {pad.back, pad.pad_toggle, pad.buttons[SS_PAD_PLUS]};
+    UIButton *menuButtons[] = {self.backButton, self.padToggle, self.skipButton};
+    for (int i = 0; i < 3; ++i) {
         ss_pad_circle c = menuControls[i];
         menuButtons[i].frame = CGRectMake(c.x - c.size / 2, c.y - c.size / 2, c.size, c.size);
     }
-    self.backButton.hitMargin = pad.hit_margin;
+    self.backButton.hitMargin = self.skipButton.hitMargin = pad.hit_margin;
     [self updateDimming];
     /* The safe area can change after the first layout. Log each new size or inset. */
     NSString *layoutKey = [NSString stringWithFormat:@"%@ %@ %.1f", NSStringFromCGSize(size), NSStringFromUIEdgeInsets(safe), (double)windowTop];
@@ -1178,6 +1352,7 @@ static void *runGame(void *unused) {
 - (void)cancelTouches {
     for (PadButton *button in self.buttons) if (button.highlighted) button.highlighted = NO;
     if (self.backButton.highlighted) self.backButton.highlighted = NO;
+    if (self.skipButton.highlighted) self.skipButton.highlighted = NO;
     [self.dpad cancelInput];
     for (TouchZone *zone in self.zones) [zone cancelInput];
     [self.leftZone applyHint:SS_TOUCH_MENU];
@@ -1234,13 +1409,13 @@ static void *runGame(void *unused) {
 @end
 @implementation GameDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
-    tvModeToggle = [[NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenTVModeToggle"] boolValue];
+    tvModeToggle = [[NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableTVModeToggle"] boolValue];
     BOOL launchModeSet = getenv("DM_OPMODE") != NULL;   /* devicectl or Xcode launch environment */
     NSFileManager *fm = NSFileManager.defaultManager;
     NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
     NSString *bundle = NSBundle.mainBundle.resourcePath;
-    NSString *gameID = [NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenGameID"];
-    NSString *saveDirectory = [NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenSaveDirectory"];
+    NSString *gameID = [NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableGameID"];
+    NSString *saveDirectory = [NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableSaveDirectory"];
     NSArray *localizations = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleLocalizations"];
     NSArray *appleLanguages = nil;
     NSArray *preferredLanguages = nil;
@@ -1286,21 +1461,21 @@ static void *runGame(void *unused) {
     setenv("DM_MSL_DIR", [bundle stringByAppendingPathComponent:@"Shaders/ios"].fileSystemRepresentation, 1);
     setenv("DM_PSO_MANIFEST", "off", 1); setenv("DM_NVN_TBDR", "0", 1); setenv("DM_PRESENT_LINK", "0", 1);
     setenv("DM_AUDIO", "1", 1);
-    NSDictionary *environment = [NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenRuntimeEnvironment"];
+    NSDictionary *environment = [NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableRuntimeEnvironment"];
     for (NSString *key in environment) {
         setenv(key.UTF8String, [environment[key] UTF8String], 1);
     }
     if (tvModeToggle) {
         NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
-        BOOL saved = [defaults objectForKey:@"NitenTVMode"] != nil;
+        BOOL saved = [defaults objectForKey:@"TouchableTVMode"] != nil;
         /* A launch environment wins for device tests. Otherwise the saved mode wins over the
            profile default. The game reads DM_OPMODE once during start-up. */
-        if (!launchModeSet && saved) setenv("DM_OPMODE", [defaults boolForKey:@"NitenTVMode"] ? "1" : "0", 1);
+        if (!launchModeSet && saved) setenv("DM_OPMODE", [defaults boolForKey:@"TouchableTVMode"] ? "1" : "0", 1);
         const char *mode = getenv("DM_OPMODE");
         tvModeOn = mode && *mode && atoi(mode) != 0;
         setenv("DM_OPMODE", tvModeOn ? "1" : "0", 1);
         fprintf(stderr, "TV mode: launch %s (saved %s)\n", tvModeOn ? "TV" : "handheld",
-                saved ? ([defaults boolForKey:@"NitenTVMode"] ? "TV" : "handheld") : "unset");
+                saved ? ([defaults boolForKey:@"TouchableTVMode"] ? "TV" : "handheld") : "unset");
     }
     /* The game starts at 60 Hz. The input display link raises the rate when the screen runs at 120 Hz. */
     const char *displayHz = getenv("SS_DISPLAY_HZ");
@@ -1308,7 +1483,7 @@ static void *runGame(void *unused) {
     setenv("SS_DISPLAY_HZ", "60", 1);
     AVAudioSession *audio = AVAudioSession.sharedInstance;
     [audio setCategory:AVAudioSessionCategoryPlayback error:nil];
-    NSNumber *ioBuffer = [NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenAudioIOBufferDuration"];
+    NSNumber *ioBuffer = [NSBundle.mainBundle objectForInfoDictionaryKey:@"TouchableAudioIOBufferDuration"];
     if (ioBuffer) [audio setPreferredIOBufferDuration:ioBuffer.doubleValue error:nil];
     [audio setActive:YES error:nil];
     ss_haptics_ios_init();
@@ -1316,11 +1491,11 @@ static void *runGame(void *unused) {
         BOOL paused = [note.userInfo[AVAudioSessionInterruptionTypeKey] unsignedIntegerValue] == AVAudioSessionInterruptionTypeBegan;
         dm_audio_suspend(paused);
     }];
-    fprintf(stderr, "Nitenphone %s build %s %s; iOS %s\n", gameID.UTF8String, __DATE__, __TIME__, UIDevice.currentDevice.systemVersion.UTF8String);
+    fprintf(stderr, "Touchable %s build %s %s; iOS %s\n", gameID.UTF8String, __DATE__, __TIME__, UIDevice.currentDevice.systemVersion.UTF8String);
     return YES;
 }
 - (UISceneConfiguration *)application:(UIApplication *)application configurationForConnectingSceneSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options {
-    UISceneConfiguration *config = [[UISceneConfiguration alloc] initWithName:@"Nitenphone" sessionRole:session.role];
+    UISceneConfiguration *config = [[UISceneConfiguration alloc] initWithName:@"Touchable" sessionRole:session.role];
     config.delegateClass = GameScene.class; return config;
 }
 @end

@@ -18,6 +18,7 @@ static const device devices[] = {
     {"iPad Air 11", 1180, 820, 0, 0, 10, 20, 53, 1, 1},
     {"iPad Pro 13", 1376, 1032, 0, 0, 10, 20, 53, 1, 1},
     {"iPad small window", 700, 520, 0, 0, 0, 0, 0, 1, 0},
+    {"iPad small window, window controls", 1133, 372, 0, 0, 10, 10, 53, 1, 0},
 };
 
 static void check_device(const device *d) {
@@ -28,16 +29,16 @@ static void check_device(const device *d) {
     for (int i = 0; i < SS_PAD_BUTTONS; ++i) { all[i] = p.buttons[i]; margin[i] = p.hit_margin; }
     all[SS_PAD_BUTTONS] = p.dpad; margin[SS_PAD_BUTTONS] = p.dpad_margin;
     for (int i = 0; i <= SS_PAD_BUTTONS; ++i) {
-        double r = all[i].size / 2;
+        double r = all[i].size / 2, half = ss_pad_width(all[i]) / 2;
         /* Each control stays inside the safe area. */
-        assert(all[i].x - r >= d->left && all[i].x + r <= d->width - d->right);
+        assert(all[i].x - half >= d->left && all[i].x + half <= d->width - d->right);
         assert(all[i].y - r >= 0 && all[i].y + r <= d->height - d->bottom);
         /* Thumb controls stay below the HUD in the upper-left corner. */
         if (i != SS_PAD_PLUS && i != SS_PAD_MINUS)
-            assert(!(all[i].x - r < 0.33 * d->width && all[i].y - r < 0.24 * d->height));
+            assert(!(all[i].x - half < 0.33 * d->width && all[i].y - r < 0.24 * d->height));
         /* Touch areas do not overlap. */
         for (int j = i + 1; j <= SS_PAD_BUTTONS; ++j) {
-            double gap = hypot(all[i].x - all[j].x, all[i].y - all[j].y) - r - margin[i] - all[j].size / 2 - margin[j];
+            double gap = ss_pad_gap(all[i], all[j]) - margin[i] - margin[j];
             assert(gap >= 0);
         }
     }
@@ -55,18 +56,28 @@ static void check_device(const device *d) {
         if (i != SS_PAD_PLUS)
             assert(hypot(plus.x - d->width + d->right, plus.y - d->top) < hypot(all[i].x - d->width + d->right, all[i].y - d->top));
     }
-    assert(minus.x - minus.size / 2 - d->left <= 40 && d->width - d->right - plus.x - plus.size / 2 <= 40);
-    assert(minus.y - minus.size / 2 >= d->top && minus.y + minus.size / 2 <= 0.2 * d->height && plus.y == minus.y);
-    /* Back takes the place of -. They never show together. The pad toggle stays in the
-       upper-right corner, apart from + and -, because it also shows with the pad. */
+    /* Build 23 moves - and + to the side edges of the safe area (8 points on a tablet or a phone without insets). */
+    double edge = p.tablet ? 8 : (d->left > 0 ? 0 : 8);
+    assert(fabs(minus.x - minus.size / 2 - d->left - edge) < 1e-9);
+    assert(fabs(d->width - d->right - plus.x - plus.size / 2 - edge) < 1e-9);
+    assert(minus.y - minus.size / 2 >= d->top && minus.y + minus.size / 2 <= fmax(0.2 * d->height, d->window + 4 + minus.size) && plus.y == minus.y);
+    /* On an iPad, also in a small window with the phone layout, - and + stay below the window controls. */
+    if (d->pad) assert(minus.y - minus.size / 2 >= d->window);
+    /* Back takes the place of -. They never show together. The pad toggle stays at the
+       right edge below +, apart from + and the other controls, because it also shows with the pad.
+       A phone up to 390 points high (iPhone 16 Pro: 381 without the home indicator) has no space above
+       the capsule ZR, so the toggle goes next to +. */
     assert(p.back.x == minus.x && p.back.y == minus.y && p.back.size == minus.size);
     ss_pad_circle toggle = p.pad_toggle;
     double tr = toggle.size / 2;
     assert(toggle.x - tr >= d->left && toggle.x + tr <= d->width - d->right);
-    assert(toggle.y - tr >= d->top && toggle.y + tr <= 0.2 * d->height);
-    for (int j = SS_PAD_PLUS; j <= SS_PAD_MINUS; ++j)
-        assert(hypot(toggle.x - p.buttons[j].x, toggle.y - p.buttons[j].y) - tr - p.buttons[j].size / 2 - 2 * p.hit_margin >= 0);
-    assert(toggle.x > 0.75 * d->width);
+    assert(toggle.y - tr >= d->top && toggle.y + tr <= 0.33 * d->height);
+    for (int j = 0; j <= SS_PAD_BUTTONS; ++j)
+        assert(hypot(toggle.x - all[j].x, toggle.y - all[j].y) - tr - all[j].size / 2 - p.hit_margin - margin[j] >= 2);
+    if (d->height - d->bottom >= 390)
+        assert(toggle.x == plus.x && toggle.y > plus.y);
+    else
+        assert(toggle.y == plus.y && toggle.x < plus.x && toggle.x > 0.75 * d->width);
     /* The D-pad center ignores a resting thumb but leaves most of the D-pad for directions. */
     assert(p.dpad_center >= 12 && p.dpad_center <= 0.2 * p.dpad.size);
     /* Build 18 makes the D-pad as wide as the face-button diamond after user feedback.
@@ -91,7 +102,6 @@ static void check_device(const device *d) {
             assert(all[i].x - all[i].size / 2 - d->left >= 7.99 && d->width - d->right - all[i].x - all[i].size / 2 >= 7.99);
         /* - and + stay below the window controls. - stays clear of the silk spool in the game HUD.
            The iPad mini simulator shows the spool at (75.5, 70.5) with a 25.5-point radius. The HUD scales with the height. */
-        assert(minus.y - minus.size / 2 >= d->window);
         double hud = d->height / 744;
         assert(hypot(minus.x - 75.5 * hud, minus.y - 70.5 * hud) >= minus.size / 2 + 25.5 * hud + 2);
         assert(minus.size >= 28 && p.pad_toggle.size >= 28);
@@ -99,11 +109,11 @@ static void check_device(const device *d) {
         assert(p.dpad.size == 168 && p.buttons[SS_PAD_A].size == 54);
         assert(d->height - d->bottom - (p.dpad.y + p.dpad.size / 2) <= 36);
     }
-    printf("%-24s %s: D-pad (%.0f, %.0f) %.0f, A (%.0f, %.0f) %.0f, ZR (%.0f, %.0f), ZL (%.0f, %.0f), - (%.0f, %.0f), + (%.0f, %.0f)\n",
+    printf("%-24s %s: D-pad (%.0f, %.0f) %.0f, A (%.0f, %.0f) %.0f, ZR (%.0f, %.0f), ZL (%.0f, %.0f), - (%.0f, %.0f), + (%.0f, %.0f), toggle (%.0f, %.0f)\n",
            d->name, p.tablet ? "tablet" : "phone", p.dpad.x, p.dpad.y, p.dpad.size,
            p.buttons[SS_PAD_A].x, p.buttons[SS_PAD_A].y, p.buttons[SS_PAD_A].size,
            p.buttons[SS_PAD_ZR].x, p.buttons[SS_PAD_ZR].y, p.buttons[SS_PAD_ZL].x, p.buttons[SS_PAD_ZL].y,
-           p.buttons[SS_PAD_MINUS].x, p.buttons[SS_PAD_MINUS].y, p.buttons[SS_PAD_PLUS].x, p.buttons[SS_PAD_PLUS].y);
+           p.buttons[SS_PAD_MINUS].x, p.buttons[SS_PAD_MINUS].y, p.buttons[SS_PAD_PLUS].x, p.buttons[SS_PAD_PLUS].y, p.pad_toggle.x, p.pad_toggle.y);
 }
 
 static unsigned at_angle(double degrees, double distance, unsigned previous) {
@@ -151,6 +161,6 @@ static void check_dpad(void) {
 int main(void) {
     for (size_t i = 0; i < sizeof devices / sizeof devices[0]; ++i) check_device(&devices[i]);
     check_dpad();
-    puts("PASS: touch layout fits phones, tablets, and a small iPad window without overlap or HUD cover; - and + take the upper corners; the D-pad has 8 equal sectors");
+    puts("PASS: touch layout fits phones, tablets, and a small iPad window without overlap or HUD cover; - and + take the outer upper corners and the pad toggle stays clear; the D-pad has 8 equal sectors");
     return 0;
 }

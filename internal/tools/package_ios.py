@@ -37,7 +37,7 @@ def main():
         info = plistlib.load(stream)
     if info.get('CFBundleIdentifier') != game.bundle_id:
         parser.error('The app bundle ID does not match the selected game.')
-    if info.get('NitenGameID', game.id) != game.id:
+    if info.get('TouchableGameID', game.id) != game.id:
         parser.error('The app game ID does not match the selected game.')
     output = (args.output or game.ipa_dir / f'{game.product_name}-build{info["CFBundleVersion"]}.ipa').resolve()
     if output.exists():

@@ -24,17 +24,30 @@ class UnlockAllTest(unittest.TestCase):
         data[0x2e4] = 0x71       # its other fields
         data[0x2c] = 3           # menu feature already unlocked
         out, raised = unlock_all.unlock(bytes(data))
-        self.assertEqual(out[0x28], 0)                     # kind 0 index 0 is not a feature
-        self.assertTrue(all(out[0x28 + 4 * i] == 3 for i in range(1, 14)))
+        self.assertTrue(all(out[0x28 + 4 * i] == 3 for i in range(13)))   # 0 is the cafe
+        self.assertEqual(out[0x28 + 4 * 13], 0)            # 13 is the unused dummy entry
         self.assertTrue(all(out[0x60 + 16 * i] >= 2 for i in range(80)))
         self.assertTrue(all(out[0x560 + 8 * i] == 2 for i in range(30)))
         self.assertEqual(out[0x2e0], 6)
         self.assertEqual(out[0x2e4], 0x71)
-        self.assertEqual(raised, 12 + 79 + 30)
+        self.assertEqual(raised, 12 + 79 + 30)          # 13 menu entries, one already unlocked
         self.assertEqual(out[:0x28], bytes(data[:0x28]))
         changed = {i for i in range(len(out)) if out[i] != data[i]}
         allowed = {0x28 + 4 * i for i in range(14)} | {0x60 + 16 * i for i in range(80)} | {0x560 + 8 * i for i in range(30)}
         self.assertTrue(changed <= allowed)
+
+    def test_unlocks_cafe_in_a_save_from_the_old_tool(self):
+        data = blank_save()
+        for i in range(1, 14):
+            data[0x28 + 4 * i] = 3
+        for i in range(80):
+            data[0x60 + 16 * i] = 7
+        for i in range(30):
+            data[0x560 + 8 * i] = 2
+        out, raised = unlock_all.unlock(bytes(data))
+        self.assertEqual(raised, 1)
+        self.assertEqual([i for i in range(len(out)) if out[i] != data[i]], [0x28])
+        self.assertEqual(out[0x28], 3)
 
     def test_rejects_other_files(self):
         with self.assertRaises(ValueError):

@@ -5,8 +5,12 @@ Save layout (main build 03ff4a3b..., found in the save manager at main+0x3ca0 / 
   0x10  u32 header size, must be 0x34      0x14  u32 file size, must be 0x1188
   The first 16 bytes are not a checksum; the game only checks the two header fields.
   Progress entries are addressed by (kind, index); the first byte of each entry is its state.
-  kind 0  menu features (cafe, toys, drum lessons, score, back world ...): 4-byte entries at 0x28,
-          indices 1..13. 0 = hidden, 1 = shown as "?", 3 = unlocked (the value the game writes).
+  kind 0  menu features: 4-byte entries at 0x28, indices 0..13, named by the table at main+0xcdad60:
+          0 cafe, 1 bar, 2 toy_menu_single, 3 toy_menu_multi, 4 score_menu, 5 beatspell_menu,
+          6 drum_menu, 7 credit, 8 cast, 9 to_part_1, 10 to_part_2, 11 player_num, 12 name_edit,
+          13 dummy (not used). 0 = hidden, 1 = shown as "?", 3 = unlocked (the value the game writes).
+          The game unlocks the cafe after an early event. When all stages are already cleared, that
+          event does not occur, so this tool must set the cafe entry too.
   kind 1  normal-world stages and remixes: 16-byte entries at 0x60, indices 0..79.
           0 = hidden, 1 = shown as "?", 2 = unlocked (NEW), 4 and above = played / cleared / medals.
   kind 2  back-world stages: 8-byte entries at 0x560, indices 0..29, same states as kind 1.
@@ -23,7 +27,7 @@ import sys
 
 SIZE = 0x1188
 GROUPS = (  # kind, offset, stride, count, first index, unlocked state
-    (0, 0x28, 4, 14, 1, 3),
+    (0, 0x28, 4, 13, 0, 3),   # 0 cafe .. 12 name_edit; 13 dummy stays as the game left it
     (1, 0x60, 16, 80, 0, 2),
     (2, 0x560, 8, 30, 0, 2),
 )
