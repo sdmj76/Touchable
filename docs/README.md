@@ -10,6 +10,7 @@ Developer notes:
 - [Project summary](developer/project-summary.md)
 - [Development workflow](developer/agent-workflow.md)
 - [System architecture](developer/architecture.md)
+- [Engine and porting pipeline](developer/engine-and-porting.md)
 - [Add a game](developer/add-game.md)
 - [Directory reorganization record](developer/reorganization.md)
 - [Project rename and compatibility notes](developer/project-rename.md)
