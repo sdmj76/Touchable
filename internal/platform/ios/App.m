@@ -743,7 +743,7 @@ static void *runGame(void *unused) {
 @property(nonatomic, strong) PointerView *pointerView;
 @property(nonatomic, strong) PadButton *backButton;
 @property(nonatomic, strong) UIButton *padToggle;
-@property(nonatomic, strong) UIButton *tvModeButton;   /* start menu only */
+@property(nonatomic, strong) UIButton *tvModeButton;   /* shown outside levels */
 @property(nonatomic) BOOL padInMenu;      /* the player showed the pad in a touch menu */
 @property(nonatomic) BOOL touchMenu;      /* the pad is hidden for a touch menu */
 @property(nonatomic) int pointerMode;
@@ -849,9 +849,9 @@ static void *runGame(void *unused) {
         }];
     }
     if (self.rhythmLayout && tvModeToggle) {
-        /* The button follows the right-side start menu. The game adapter shows it only there. */
+        /* The button shows in menus, maps, and other non-level periods. */
         self.tvModeButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        self.tvModeButton.accessibilityLabel = @"TV 模式";
+        self.tvModeButton.accessibilityLabel = @"切换运行模式";
         self.tvModeButton.accessibilityHint = @"打开启动模式切换确认";
         [self.tvModeButton addTarget:self action:@selector(toggleTVMode) forControlEvents:UIControlEventTouchUpInside];
         [self updateTVModeButton];
@@ -905,8 +905,7 @@ static void *runGame(void *unused) {
         BOOL dpad = ss_touch_layout(hint) == SS_TOUCH_DPAD;
         BOOL single = ss_touch_layout(hint) == SS_TOUCH_ONE;
         if (self.tvModeButton)
-            self.tvModeButton.hidden = !(hasPointer && frame.mode == SS_POINTER_MENU && ss_touch_home_get()) ||
-                                       self.presentedViewController != nil;
+            self.tvModeButton.hidden = ss_touch_level_get();
         int extra = ss_touch_extra(hint);   /* zero outside a level */
         [self.leftZone applyHint:hint];
         self.leftZone.hidden = menu || dpad || single;
@@ -978,19 +977,23 @@ static void *runGame(void *unused) {
 - (void)updateTVModeButton {
     if (!self.tvModeButton) return;
     UIButtonConfiguration *config = glassButtonConfiguration();
-    config.image = [UIImage systemImageNamed:tvModeOn ? @"tv" : @"iphone.landscape"];
+    config.image = [UIImage systemImageNamed:tvModeOn ? @"iphone.landscape" : @"tv"];
     config.preferredSymbolConfigurationForImage = [UIImageSymbolConfiguration configurationWithPointSize:20 weight:UIImageSymbolWeightSemibold];
     setGlassButton(self.tvModeButton, config);
-    self.tvModeButton.accessibilityValue = tvModeOn ? @"当前 TV 模式" : @"当前掌机模式";
+    self.tvModeButton.accessibilityValue = tvModeOn ? @"当前 TV 模式，点击切换到掌机模式" : @"当前掌机模式，点击切换到 TV 模式";
 }
 - (void)toggleTVMode {
     if (!tvModeToggle || self.presentedViewController) return;
     BOOL target = !tvModeOn;
     NSString *currentName = tvModeOn ? @"TV" : @"掌机";
     NSString *targetName = target ? @"TV" : @"掌机";
-    /* The runtime has no in-process restart. A new mode starts with the next app launch. */
-    NSString *message = [NSString stringWithFormat:@"当前模式：%@\n是否切换为%@模式？\n\n重启APP后生效。", currentName, targetName];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+    NSString *feature = target ? @"启用功能：延迟校正" : @"关闭功能：延迟校正";
+    /* The first alert separates the current mode from the question and the feature change.
+       The runtime has no in-process restart. A new mode starts with the next app launch. */
+    UIAlertController *alert = [UIAlertController
+        alertControllerWithTitle:[NSString stringWithFormat:@"当前模式：%@", currentName]
+        message:[NSString stringWithFormat:@"是否切换为%@模式？\n\n%@", targetName, feature]
+        preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
     [alert addAction:[UIAlertAction actionWithTitle:@"切换" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
@@ -1079,14 +1082,6 @@ static void *runGame(void *unused) {
     CGFloat bottom = size.height - MAX(safe.bottom + 18, 36);
     if (self.rhythmLayout) {
         CGRect game = gameRect(size);
-        if (self.tvModeButton) {
-            /* The start menu occupies the right side of the picture. Put the mode button under
-               its last row, centered on the list. Game coordinates are 1920 x 1080. */
-            CGFloat scale = game.size.width / 1920;
-            CGFloat side = round(110 * scale);
-            self.tvModeButton.frame = CGRectMake(game.origin.x + 1320 * scale - side / 2,
-                                                 game.origin.y + 1010 * scale - side / 2, side, side);
-        }
         self.verticalBars = game.origin.y >= 44 && size.height - CGRectGetMaxY(game) >= 44;
         CGFloat contentLeft = self.verticalBars ? game.origin.x : 0;
         CGFloat contentRight = self.verticalBars ? CGRectGetMaxX(game) : size.width;
@@ -1113,6 +1108,12 @@ static void *runGame(void *unused) {
             centers[8] = (CGPoint){lx + 2 * pair, topY}; /* X */
             centers[5] = (CGPoint){rx - pair, topY}; /* - */
             centers[6] = (CGPoint){rx, topY};        /* + */
+        }
+        if (self.tvModeButton) {
+            /* Below the minus button. On iPad this position is also left of the plus button. */
+            CGFloat side = 44;
+            CGPoint center = CGPointMake(centers[5].x, centers[5].y + 56);
+            self.tvModeButton.frame = CGRectMake(center.x - side / 2, center.y - side / 2, side, side);
         }
         self.glassLayer.frame = self.view.bounds;
         for (NSUInteger i = 0; i < self.buttons.count; ++i) {

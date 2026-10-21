@@ -11,6 +11,75 @@ Build 17 added iPad device checks. The results are in the records below.
 Build 29 is installed on the iPhone, but it has no device game test. Its results come from the Mac host, unit tests, and the iOS Simulator.
 The user ran build 30 on the iPhone. Builds 31–34 have no device tests. Their results come from the Mac host, unit tests, and offline renders.
 
+## TV mode alert text and target icon (build 43)
+
+Build 43 changes the first TV mode alert and the button icon.
+
+- The first alert has the title `当前模式：<mode>`. The message asks whether to switch and
+  shows `启用功能：延迟校正` for handheld to TV mode or `关闭功能：延迟校正` for TV to
+  handheld mode.
+- The button shows the target mode icon: `tv` in handheld mode and `iphone.landscape` in TV
+  mode.
+- Build 42 used the running-mode icon and the `重启APP后生效` line.
+
+Checks:
+
+- The `App.m` syntax check passes.
+- The Release device build passes without signing.
+- `test_touch`, `test_menu`, `test_touch_layout`, and the Python suite pass.
+- No device test ran.
+
+The Release IPA uses Bundle ID `com.sdmj76.RhythmHeaven`. It is unsigned.
+IPA: `IPA/rhythm-heaven/RhythmHeaven-build43-tv-mode-ui-20261022.ipa`.
+SHA-256 `36bd883fba0e3944c84614b1c6cba20caf5354a792a9a46888d2cfb33c5c15b1`.
+Size 2,743,610,058 bytes.
+Build 42 is superseded. The build 41 and 42 IPAs were deleted at user request.
+
+## TV mode button in level pause and alert (build 42)
+
+Build 41 showed the mode button in a level pause and hid it while the confirmation alert was
+open.
+Build 42 marks the level in the game adapter. It hides the button in a level, including its
+pause menu. It keeps the button visible while the alert is open.
+
+Checks:
+
+- The `App.m` syntax check passes.
+- The Release device build passes without signing.
+- `test_touch`, `test_menu`, `test_touch_layout`, and the Python suite pass.
+- No device test ran.
+
+The Release IPA uses Bundle ID `com.sdmj76.RhythmHeaven`. It is unsigned.
+IPA: `IPA/rhythm-heaven/RhythmHeaven-build42-tv-mode-pause-20261021.ipa`.
+SHA-256 `3affd713f3061fa53abc24fd4872dcd90e6eba4af30c187e28748de6963b0e20`.
+Size 2,743,609,911 bytes.
+Build 41 is superseded.
+
+## TV mode button on the main interface (build 41)
+
+Build 40 did not show the mode button on the main interface. The button required a start-menu
+flag that the app did not set.
+Build 41 shows the button when the game is not in a level.
+
+- The button sits below the minus button. On iPad this position is also left of the plus
+  button.
+- It is 44 points and shows `iphone.landscape` for handheld mode and `tv` for TV mode.
+- Build 41 hid the button during normal level play but showed it in a level pause. An open
+  alert also hid it.
+
+Checks:
+
+- The `App.m` syntax check passes.
+- Debug and Release device builds pass without signing.
+- `test_touch`, `test_menu`, `test_touch_layout`, and the Python suite pass.
+- No device test ran.
+
+The Release IPA uses Bundle ID `com.sdmj76.RhythmHeaven`. It is unsigned.
+IPA: `IPA/rhythm-heaven/RhythmHeaven-build41-tv-mode-button-20261021.ipa`.
+SHA-256 `d1c02e3f353a15ec1e90d98b4aeb7a326b0c1138d0322118f75790b31ea3619e`.
+Size 2,743,609,707 bytes.
+Build 41 is superseded by build 42.
+
 ## Optional TV mode (build 40)
 
 The game offers its TV latency calibration only in console mode.
@@ -19,8 +88,8 @@ Build 40 adds an optional TV mode.
 
 - The runtime reads `DM_OPMODE`. `1` reports console mode. Console mode presents a full-key
   controller.
-- The start menu shows a glass mode button below the right-side list. It shows
-  `iphone.landscape` for handheld mode and `tv` for TV mode.
+- Build 40 added a glass mode button. It required a start-menu flag, so the main interface
+  did not show it. It showed `iphone.landscape` for handheld mode and `tv` for TV mode.
 - A tap asks for confirmation. Cancel keeps the current mode. Confirm saves `NitenTVMode`.
   The button icon and the alert keep the mode of the running app. The next launch applies the
   saved mode.

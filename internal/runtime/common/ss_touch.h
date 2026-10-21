@@ -33,10 +33,11 @@ void ss_touch_left_set(int layout, int first, int second, int extra);
 /* Packed hint: layout | first << 8 | second << 16 | extra << 24 | change count << 32. Starts as SS_TOUCH_MENU. */
 uint64_t ss_touch_left_get(void);
 
-/* True while the game shows its home page (the start menu). The iPhone layer uses it to show
-   the TV mode button only there. Called by the game adapter on any thread. */
-void ss_touch_home_set(int active);
-int ss_touch_home_get(void);
+/* True while the game is in a level. The game adapter sets it when it reads a level asset and
+   clears it when it reads a menu or result asset. The iPhone layer hides the TV mode button
+   in a level, including its pause menu. */
+void ss_touch_level_set(int active);
+int ss_touch_level_get(void);
 
 static inline int ss_touch_layout(uint64_t hint) { return (int)(hint & 0xff); }
 static inline int ss_touch_first(uint64_t hint) { return (int)(hint >> 8 & 0xff); }

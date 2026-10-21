@@ -36,10 +36,11 @@ void ss_touch_left_set(int layout, int first, int second, int extra) {
     atomic_store(&touch_left, value | ((old >> 32) + 1) << 32);
 }
 uint64_t ss_touch_left_get(void) { return atomic_load(&touch_left); }
-/* The game adapter marks the start menu. The iOS layer shows the TV mode button only there. */
-static _Atomic int touch_home;
-void ss_touch_home_set(int active) { atomic_store(&touch_home, active != 0); }
-int ss_touch_home_get(void) { return atomic_load(&touch_home); }
+/* The game adapter marks a level. The iOS layer hides the TV mode button in a level,
+   including its pause menu. */
+static _Atomic int touch_level;
+void ss_touch_level_set(int active) { atomic_store(&touch_level, active != 0); }
+int ss_touch_level_get(void) { return atomic_load(&touch_level); }
 static uint64_t held_buttons(void) {
     uint64_t mask = atomic_load(&buttons), now = guest_ns();
     for (int bit = 0; bit < 64; ++bit) {
