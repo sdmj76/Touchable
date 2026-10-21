@@ -11,6 +11,39 @@ Build 17 added iPad device checks. The results are in the records below.
 Build 29 is installed on the iPhone, but it has no device game test. Its results come from the Mac host, unit tests, and the iOS Simulator.
 The user ran build 30 on the iPhone. Builds 31–34 have no device tests. Their results come from the Mac host, unit tests, and offline renders.
 
+## Optional TV mode (build 40)
+
+The game offers its TV latency calibration only in console mode.
+The runtime used to report handheld mode at all times.
+Build 40 adds an optional TV mode.
+
+- The runtime reads `DM_OPMODE`. `1` reports console mode. Console mode presents a full-key
+  controller.
+- The start menu shows a glass mode button below the right-side list. It shows
+  `iphone.landscape` for handheld mode and `tv` for TV mode.
+- A tap asks for confirmation. Cancel keeps the current mode. Confirm saves `NitenTVMode`.
+  The button icon and the alert keep the mode of the running app. The next launch applies the
+  saved mode.
+- The confirm action shows `切换成功，重启APP生效` or `切换失败，请重试`. It has one `好`
+  button.
+- An in-process restart is not possible. The loader has no teardown and the app starts the
+  game once. See the [TV mode report](../../../.nitenphone/work/rhythm-heaven/reports/tv-mode-option-20261021/README.md).
+
+Checks:
+
+- `test_touch`, `test_menu`, `test_touch_layout`, and the Python suite pass.
+- Mac host with `DM_OPMODE=1` logs `Operation mode: TV (DM_OPMODE)` and a full-key
+  controller (`style 0x1`).
+- Debug and Release device builds pass without signing.
+- No device test ran. The Mac host could not pass the title screen because its Metal shader
+  libraries are absent.
+
+The Release IPA uses Bundle ID `com.sdmj76.RhythmHeaven`. It is unsigned.
+IPA: `IPA/rhythm-heaven/RhythmHeaven-build40-tv-mode-20261021.ipa`.
+SHA-256 `72498394b0670ce525da6ffd268533b5e0acc2c6eed2dcf19f596ed2314ed52d`.
+Size 2,743,610,008 bytes.
+Builds 38 and 39 were local attempts and are not used.
+
 ## Items after the first list page (build 37)
 
 A long list draws the rows after its first page. The game parks those rows at one off-page position.

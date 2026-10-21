@@ -36,6 +36,10 @@ void ss_touch_left_set(int layout, int first, int second, int extra) {
     atomic_store(&touch_left, value | ((old >> 32) + 1) << 32);
 }
 uint64_t ss_touch_left_get(void) { return atomic_load(&touch_left); }
+/* The game adapter marks the start menu. The iOS layer shows the TV mode button only there. */
+static _Atomic int touch_home;
+void ss_touch_home_set(int active) { atomic_store(&touch_home, active != 0); }
+int ss_touch_home_get(void) { return atomic_load(&touch_home); }
 static uint64_t held_buttons(void) {
     uint64_t mask = atomic_load(&buttons), now = guest_ns();
     for (int bit = 0; bit < 64; ++bit) {
@@ -45,7 +49,15 @@ static uint64_t held_buttons(void) {
     return mask;
 }
 static uint32_t player_style(uint32_t id) {
-    return id == player ? (player == 0x20 ? 2 : 1) & atomic_load(&styles) : 0;
+    /* The game checks the controller style before it offers the TV latency calibration.
+       Console mode presents a full-key controller for the selected player or player 0.
+       Handheld mode keeps the prior handheld/full-key behavior. */
+    int tv = dm_opmode() != 0;
+    if (tv) {
+        if (id != player && id != 0) return 0;
+        return 1u & atomic_load(&styles);
+    }
+    return id == player ? (player == 0x20 ? 2u : 1u) & atomic_load(&styles) : 0;
 }
 static void pad_read(ss_pad_state *out, uint32_t id, uint32_t style) {
     *out = (ss_pad_state){.sample = guest_ns() / 1000000};
@@ -53,6 +65,13 @@ static void pad_read(ss_pad_state *out, uint32_t id, uint32_t style) {
         out->buttons = held_buttons();
         out->lx = atomic_load(&axis_x); out->ly = atomic_load(&axis_y);
         out->attributes = 3;
+        if (out->buttons) {
+            static int logged;
+            if (!logged) {
+                logged = 1;
+                LOG("Input: guest read buttons %#llx id %#x style %#x", (unsigned long long)out->buttons, id, style);
+            }
+        }
     }
 }
 #define INPUT_VOID(name, cname) HLE_FORCE(name, "Host provides input", void, cname, void) {}
@@ -67,10 +86,19 @@ HLE_FORCE("_ZN2nn3hid22SetSupportedNpadIdTypeEPKjm", "Select one local controlle
     for (uint64_t i = 0; i < count; ++i) if (ids[i] == 0x20) { selected = 0x20; break; }
     if (selected != player) ss_haptics_stop();
     player = selected;
+    LOG("Input: selected player %#x", player);
 }
-HLE_FORCE("_ZN2nn3hid24SetSupportedNpadStyleSetENS_4util10BitFlagSetILi32ENS0_12NpadStyleTagEEE", "Set supported controller styles", void, ss_pad_styles, uint32_t value) { atomic_store(&styles, value); if (!player_style(player)) ss_haptics_stop(); }
+HLE_FORCE("_ZN2nn3hid24SetSupportedNpadStyleSetENS_4util10BitFlagSetILi32ENS0_12NpadStyleTagEEE", "Set supported controller styles", void, ss_pad_styles, uint32_t value) { atomic_store(&styles, value); LOG("Input: supported controller styles %#x", value); if (!player_style(player)) ss_haptics_stop(); }
 HLE_FORCE("_ZN2nn3hid24GetSupportedNpadStyleSetEv", "Read supported controller styles", uint32_t, ss_pad_styles_get, void) { return atomic_load(&styles); }
-HLE_FORCE("_ZN2nn3hid15GetNpadStyleSetERKj", "Read local controller style", uint32_t, ss_pad_style, const uint32_t *id) { return player_style(*id); }
+HLE_FORCE("_ZN2nn3hid15GetNpadStyleSetERKj", "Read local controller style", uint32_t, ss_pad_style, const uint32_t *id) {
+    uint32_t style = player_style(*id);
+    static int logged;
+    if (!logged) {
+        logged = 1;
+        LOG("Input: player %#x id %#x style %#x supported %#x mode %d", player, *id, style, atomic_load(&styles), dm_opmode());
+    }
+    return style;
+}
 HLE_FORCE("_ZN2nn3hid27BindNpadStyleSetUpdateEventERKjPNS_2os15SystemEventTypeENS3_14EventClearModeE", "Create controller state event", void, ss_pad_event, const uint32_t *id, void *event, int clear) {
     (void)id; hle_bind_system_event(event, clear); hle_signal_system_event(event);
 }

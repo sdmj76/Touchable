@@ -1,5 +1,50 @@
 # Rhythm Heaven
 
+## 2026-10-21: Optional TV mode (build 40)
+
+The game offers its TV latency calibration only in console mode. The runtime used to report
+handheld mode at all times. The app now has an optional TV mode for this game.
+
+- Runtime: `DM_OPMODE=1` reports console mode from `nn::oe::GetOperationMode`. The input layer
+  presents a full-key controller in console mode. `DM_OPMODE=0` or an absent value keeps
+  handheld mode.
+- App: a glass button appears below the right-side start menu. The start menu is the only menu
+  with both a logo and a mascot. The button shows the SF Symbol `iphone.landscape` for handheld
+  mode and `tv` for TV mode.
+- A tap opens a confirmation alert. The alert shows the current mode, the target mode, and
+  `重启APP后生效`. Cancel keeps the current mode. Confirm saves the choice in
+  `NSUserDefaults` under `NitenTVMode`.
+- The confirm action opens one more alert. It says `切换成功，重启APP生效` or
+  `切换失败，请重试`. It has one `好` button.
+- The button icon and the current mode in the alert keep the mode of the running app. The app
+  reads the saved choice only at the next launch. A launch environment that sets
+  `DM_OPMODE` has priority. The profile value is the default before the first choice.
+- An in-process restart is not possible. The loader maps the guest modules into global state,
+  the display event rejects a second event, and the app starts the game once. The runtime has
+  no teardown. The alert therefore asks for an app restart.
+
+Checks:
+
+- `test_touch`, `test_menu`, `test_touch_layout`, and the Python suite pass.
+- Mac host with `DM_OPMODE=1` logs `Operation mode: TV (DM_OPMODE)`.
+- The same host logs `Input: player 0x20 id 0x20 style 0x1 supported 0x3 mode 1` and
+  `Input: guest read buttons 0x1`.
+- The generated Debug app for iPhone builds without signing. `NitenTVModeToggle` is in its
+  `Info.plist`.
+- The Release device build passes. The unsigned IPA has build 40, Bundle ID
+  `com.sdmj76.RhythmHeaven`, and `NitenTVModeToggle = true`.
+- The Mac host did not pass the title screen because its Metal shader libraries are absent.
+  The start-menu button and the alert are not tested on a device.
+
+The Release IPA is `IPA/rhythm-heaven/RhythmHeaven-build40-tv-mode-20261021.ipa`.
+It is unsigned. Sign it at install time.
+Its SHA-256 is `72498394b0670ce525da6ffd268533b5e0acc2c6eed2dcf19f596ed2314ed52d`.
+It is 2,743,610,008 bytes.
+Builds 38 and 39 were local attempts and are not used. Build 40 is the next package after
+build 37.
+
+See [the TV mode report](../../../.nitenphone/work/rhythm-heaven/reports/tv-mode-option-20261021/README.md).
+
 ## 2026-10-21: Items after the first list page (build 37)
 
 A long list draws the rows after its first page. The game parks those rows at one off-page position.
@@ -367,13 +412,13 @@ The records below do not include the short start check after this reorganization
 | Active content | `.nitenphone/work/rhythm-heaven/base/` |
 | Active modules | `.nitenphone/work/rhythm-heaven/patched/`, runs `main` and `sdk` |
 | Graphics | 1920×1080, NVN to Metal, 35 shader stages |
-| iPad/iPhone app | Build 37 (unsigned, not installed. The iPhone has build 30, the iPad mini has build 27), Bundle ID `com.sdmj76.RhythmHeaven` |
+| iPad/iPhone app | Build 40 (unsigned, not installed. The iPhone has build 30, the iPad mini has build 27), Bundle ID `com.sdmj76.RhythmHeaven` |
 | Phone save | `Documents/Saves/RhythmHeaven` |
 | Play record | Multiple rhythm games, some Remixes, menus, and save read/write are recorded. The full play-through is not verified |
 | Direct touch | Normal lists, the map, pause options, the rhythm archive, the music room, and demo videos |
 | Save check | After build 29 was installed on the iPhone, the 3 files matched the backup. After the build 15 recheck, both saves kept 80 P modes |
 
-Build 37 makes the list rows after the first page clickable. Build 37 is unsigned and not installed. Build 37 keeps the empty-frame fix from build 36. Build 36 fixes the long menu drag. A deep drag no longer presses A. Build 36 is unsigned and not installed. Build 35 fixes the Simplified Chinese per-app language mapping. Build 35 is unsigned and not installed.
+Build 40 adds the optional TV mode. Build 40 is unsigned and not installed. Build 37 makes the list rows after the first page clickable. Build 37 is unsigned and not installed. Build 37 keeps the empty-frame fix from build 36. Build 36 fixes the long menu drag. A deep drag no longer presses A. Build 36 is unsigned and not installed. Build 35 fixes the Simplified Chinese per-app language mapping. Build 35 is unsigned and not installed.
 Build 34 uses the system glass press effect. Build 33 declares Game Mode and stays at 60 Hz. Build 32 makes the transition between the picture edge and the letterbox border smoother. Build 31 makes the letterbox border follow the picture faster (time constant 0.06 seconds). None of these builds is installed on a device yet.
 Build 30 rewrites the border glow. It passed unit tests and the offline render comparison. The user ran it on the iPhone.
 Build 29 fixes the performance and touch controls of BeatSpell. It passed the Mac host and Simulator checks and is installed on the iPhone. BeatSpell on the iPhone is not confirmed yet.

@@ -25,6 +25,10 @@ void ss_display_set_hz(int hz);
    rate that the screen gives: 60 Hz in Low Power Mode, when the device is hot, or on a 60 Hz screen. */
 static int displayHzWanted = 60;
 
+/* TV mode is an optional per-game feature. NitenTVModeToggle in Info.plist enables it. The
+   launch mode is saved in NSUserDefaults. The game reads DM_OPMODE at start-up. */
+static BOOL tvModeToggle, tvModeOn;
+
 static CAMetalLayer *gameLayer;
 static UIViewController *gameController;
 static uint64_t touchButtons;
@@ -739,6 +743,7 @@ static void *runGame(void *unused) {
 @property(nonatomic, strong) PointerView *pointerView;
 @property(nonatomic, strong) PadButton *backButton;
 @property(nonatomic, strong) UIButton *padToggle;
+@property(nonatomic, strong) UIButton *tvModeButton;   /* start menu only */
 @property(nonatomic) BOOL padInMenu;      /* the player showed the pad in a touch menu */
 @property(nonatomic) BOOL touchMenu;      /* the pad is hidden for a touch menu */
 @property(nonatomic) int pointerMode;
@@ -752,6 +757,8 @@ static void *runGame(void *unused) {
 @property(nonatomic) int displayHzTicks;     /* display frames in a row at another rate */
 - (void)cancelTouches;
 - (void)updateTouchMenu;
+- (void)updateTVModeButton;
+- (void)toggleTVMode;
 @end
 @implementation GameViewController
 - (BOOL)prefersStatusBarHidden { return YES; }
@@ -841,6 +848,16 @@ static void *runGame(void *unused) {
             setControllerInUse(NO, "real controller disconnected");
         }];
     }
+    if (self.rhythmLayout && tvModeToggle) {
+        /* The button follows the right-side start menu. The game adapter shows it only there. */
+        self.tvModeButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        self.tvModeButton.accessibilityLabel = @"TV 模式";
+        self.tvModeButton.accessibilityHint = @"打开启动模式切换确认";
+        [self.tvModeButton addTarget:self action:@selector(toggleTVMode) forControlEvents:UIControlEventTouchUpInside];
+        [self updateTVModeButton];
+        self.tvModeButton.hidden = YES;
+        [controls addSubview:self.tvModeButton];
+    }
     self.inputLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(pollInput:)];
     self.inputLink.preferredFrameRateRange = displayHzWanted > 60 ? CAFrameRateRangeMake(80, 120, 120) : CAFrameRateRangeMake(60, 60, 60);
     self.displayHz = 60;
@@ -887,6 +904,9 @@ static void *runGame(void *unused) {
         BOOL menu = ss_touch_layout(hint) == SS_TOUCH_MENU;
         BOOL dpad = ss_touch_layout(hint) == SS_TOUCH_DPAD;
         BOOL single = ss_touch_layout(hint) == SS_TOUCH_ONE;
+        if (self.tvModeButton)
+            self.tvModeButton.hidden = !(hasPointer && frame.mode == SS_POINTER_MENU && ss_touch_home_get()) ||
+                                       self.presentedViewController != nil;
         int extra = ss_touch_extra(hint);   /* zero outside a level */
         [self.leftZone applyHint:hint];
         self.leftZone.hidden = menu || dpad || single;
@@ -954,6 +974,50 @@ static void *runGame(void *unused) {
         control.configuration = updated;
     };
 }
+/* The icon shows the mode of the running app. A saved change starts with the next app launch. */
+- (void)updateTVModeButton {
+    if (!self.tvModeButton) return;
+    UIButtonConfiguration *config = glassButtonConfiguration();
+    config.image = [UIImage systemImageNamed:tvModeOn ? @"tv" : @"iphone.landscape"];
+    config.preferredSymbolConfigurationForImage = [UIImageSymbolConfiguration configurationWithPointSize:20 weight:UIImageSymbolWeightSemibold];
+    setGlassButton(self.tvModeButton, config);
+    self.tvModeButton.accessibilityValue = tvModeOn ? @"当前 TV 模式" : @"当前掌机模式";
+}
+- (void)toggleTVMode {
+    if (!tvModeToggle || self.presentedViewController) return;
+    BOOL target = !tvModeOn;
+    NSString *currentName = tvModeOn ? @"TV" : @"掌机";
+    NSString *targetName = target ? @"TV" : @"掌机";
+    /* The runtime has no in-process restart. A new mode starts with the next app launch. */
+    NSString *message = [NSString stringWithFormat:@"当前模式：%@\n是否切换为%@模式？\n\n重启APP后生效。", currentName, targetName];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:message preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"切换" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+        id previous = [defaults objectForKey:@"NitenTVMode"];
+        [defaults setBool:target forKey:@"NitenTVMode"];
+        BOOL written = [defaults synchronize];
+        id savedValue = [defaults objectForKey:@"NitenTVMode"];
+        BOOL saved = written && [savedValue isKindOfClass:NSNumber.class] && [savedValue boolValue] == target;
+        if (!saved) {
+            /* Do not leave a value that the next launch could apply after a failed write. */
+            if (previous) [defaults setObject:previous forKey:@"NitenTVMode"];
+            else [defaults removeObjectForKey:@"NitenTVMode"];
+            [defaults synchronize];
+            fprintf(stderr, "TV mode: save failed\n");
+        } else {
+            /* tvModeOn stays the mode of this run. The icon and the next alert keep the old
+               state until the app reads the saved value at launch. */
+            fprintf(stderr, "TV mode: next launch uses %s\n", target ? "TV" : "handheld");
+        }
+        NSString *result = saved ? @"切换成功，重启APP生效" : @"切换失败，请重试";
+        UIAlertController *done = [UIAlertController alertControllerWithTitle:nil message:result
+                                                                    preferredStyle:UIAlertControllerStyleAlert];
+        [done addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+        dispatch_async(dispatch_get_main_queue(), ^{ [self presentViewController:done animated:YES completion:nil]; });
+    }]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
 - (void)togglePad {
     self.padInMenu = !self.padInMenu;
     fprintf(stderr, "Touch menu: pad %s by the player\n", self.padInMenu ? "shown" : "hidden");
@@ -980,7 +1044,11 @@ static void *runGame(void *unused) {
 /* Put a dark circle behind each visible glass control. */
 - (void)updateDimming {
     CGMutablePathRef path = CGPathCreateMutable();
-    NSMutableArray<UIView *> *views = [NSMutableArray arrayWithObjects:self.dpad, self.backButton, self.padToggle, nil];
+    NSMutableArray<UIView *> *views = [NSMutableArray array];
+    if (self.dpad) [views addObject:self.dpad];
+    if (self.backButton) [views addObject:self.backButton];
+    if (self.padToggle) [views addObject:self.padToggle];
+    if (self.tvModeButton) [views addObject:self.tvModeButton];
     [views addObjectsFromArray:self.buttons];
     for (UIView *view in views) {
         BOOL glass = ![view isKindOfClass:PadButton.class] || ((PadButton *)view).glassShown;
@@ -1011,6 +1079,14 @@ static void *runGame(void *unused) {
     CGFloat bottom = size.height - MAX(safe.bottom + 18, 36);
     if (self.rhythmLayout) {
         CGRect game = gameRect(size);
+        if (self.tvModeButton) {
+            /* The start menu occupies the right side of the picture. Put the mode button under
+               its last row, centered on the list. Game coordinates are 1920 x 1080. */
+            CGFloat scale = game.size.width / 1920;
+            CGFloat side = round(110 * scale);
+            self.tvModeButton.frame = CGRectMake(game.origin.x + 1320 * scale - side / 2,
+                                                 game.origin.y + 1010 * scale - side / 2, side, side);
+        }
         self.verticalBars = game.origin.y >= 44 && size.height - CGRectGetMaxY(game) >= 44;
         CGFloat contentLeft = self.verticalBars ? game.origin.x : 0;
         CGFloat contentRight = self.verticalBars ? CGRectGetMaxX(game) : size.width;
@@ -1157,6 +1233,8 @@ static void *runGame(void *unused) {
 @end
 @implementation GameDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
+    tvModeToggle = [[NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenTVModeToggle"] boolValue];
+    BOOL launchModeSet = getenv("DM_OPMODE") != NULL;   /* devicectl or Xcode launch environment */
     NSFileManager *fm = NSFileManager.defaultManager;
     NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
     NSString *bundle = NSBundle.mainBundle.resourcePath;
@@ -1210,6 +1288,18 @@ static void *runGame(void *unused) {
     NSDictionary *environment = [NSBundle.mainBundle objectForInfoDictionaryKey:@"NitenRuntimeEnvironment"];
     for (NSString *key in environment) {
         setenv(key.UTF8String, [environment[key] UTF8String], 1);
+    }
+    if (tvModeToggle) {
+        NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+        BOOL saved = [defaults objectForKey:@"NitenTVMode"] != nil;
+        /* A launch environment wins for device tests. Otherwise the saved mode wins over the
+           profile default. The game reads DM_OPMODE once during start-up. */
+        if (!launchModeSet && saved) setenv("DM_OPMODE", [defaults boolForKey:@"NitenTVMode"] ? "1" : "0", 1);
+        const char *mode = getenv("DM_OPMODE");
+        tvModeOn = mode && *mode && atoi(mode) != 0;
+        setenv("DM_OPMODE", tvModeOn ? "1" : "0", 1);
+        fprintf(stderr, "TV mode: launch %s (saved %s)\n", tvModeOn ? "TV" : "handheld",
+                saved ? ([defaults boolForKey:@"NitenTVMode"] ? "TV" : "handheld") : "unset");
     }
     /* The game starts at 60 Hz. The input display link raises the rate when the screen runs at 120 Hz. */
     const char *displayHz = getenv("SS_DISPLAY_HZ");

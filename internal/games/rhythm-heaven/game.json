@@ -4,7 +4,7 @@
   "display_name": "节奏天国",
   "product_name": "RhythmHeaven",
   "bundle_id": "com.sdmj76.RhythmHeaven",
-  "build_version": 37,
+  "build_version": 40,
   "title_id": "0100d9f01d474000",
   "profile": "profile.json",
   "status": "in-progress",
@@ -67,6 +67,7 @@
     "touch_layout": "rhythm",
     "native_drawable": true,
     "controller_haptics": true,
+    "tv_mode_toggle": true,
     "audio_io_buffer_seconds": 0.005,
     "localizations": [
       "en",

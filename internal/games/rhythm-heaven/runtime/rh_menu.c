@@ -238,7 +238,20 @@ static int list_frame(void *list, int scroll, ss_pointer_frame *frame) {
        areas. Those areas turn a continued drag into a button press. */
     return 1;
 }
+/* The start menu is the only menu root with both a logo and a mascot. The category list has
+   a mascot and the main menu has a logo. The iPhone shows the TV mode button only while this
+   list is active. */
+static int start_menu_list(void *list) {
+    void *owner = ptr(list, 8);
+    float x = 0, y = 0;
+    if (!owner) return 0;
+    void *root = ptr(owner, 0x40);
+    return point(root, "logo", &x, &y) && point(root, "mascot", &x, &y);
+}
 static int list_input(void *list, void *pad, int scroll, uintptr_t original) {
+    int home = start_menu_list(list);
+    if (home != ss_touch_home_get()) LOG("Home page: %s", home ? "start menu" : "other menu");
+    ss_touch_home_set(home);
     ss_pointer_frame frame;
     if (list_frame(list, scroll, &frame)) {
         frame.token = ss_pointer_publish(&frame);
@@ -280,6 +293,7 @@ static int selector_input(void *selector, void *root, void *scene) {
     if (!selector || !sprite(root)) return 0;
     int count = integer(selector, 0x188), selected = integer(selector, 0x190), state = integer(selector, 0x180);
     if (count < 1 || count > 3 || (state != 2 && state != 3)) return 0;
+    ss_touch_home_set(0);   /* a dialog above the start menu hides the TV mode button */
     ss_pointer_frame frame = {.owner = (uintptr_t)selector, .mode = SS_POINTER_MENU};
     const char *names[] = {"item_00", "item_01", "item_02"};
     void *layout = child(root, "layout");
@@ -365,6 +379,7 @@ static void map_pan(void *scene, float dx) {
     ((void (*)(void *, float, float))(base + 0x4fe260))((uint8_t *)stage + 8, x, real(stage, 0x1c));
 }
 static void map_input(void *scene) {
+    ss_touch_home_set(0);
     if (integer(scene, 0x5288) == 2) {
         void *selector = ptr(scene, 0x6d68);
         if (selector) selector_input(selector, ptr(selector, 0x18), scene);
@@ -406,6 +421,7 @@ static int pause_input(void *scene) {
     void *pause = (uint8_t *)scene + 0x3e58;
     int state = integer(pause, 0x2940);
     if (!state) return 0;
+    ss_touch_home_set(0);
     void *selector = ptr(pause, 0x2aa8), *root = ptr(pause, 0x2aa0);
     if (state != 2 || !selector_input(selector, root, NULL)) {
         ss_pointer_frame frame = {.owner = (uintptr_t)pause, .mode = SS_POINTER_MENU};

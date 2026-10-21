@@ -12,10 +12,13 @@
 static pthread_mutex_t touch_lock = PTHREAD_MUTEX_INITIALIZER;
 static rh_touch_state touch_state;
 static void rh_fs_open(const char *path) {
-    rh_touch_hint hint;
+    rh_touch_hint hint = {SS_TOUCH_MENU, 0, 0, 0};
     pthread_mutex_lock(&touch_lock);
     int changed = rh_touch_path(&touch_state, path, &hint);
     pthread_mutex_unlock(&touch_lock);
+    /* A graph asset other than the start menu is not the home page. The start menu list sets
+       the flag again on its next input frame. */
+    if (strstr(path, ":/graph/") && !strstr(path, "/menu/start_menu/")) ss_touch_home_set(0);
     if (!changed) return;
     ss_touch_left_set(hint.layout, hint.first, hint.second, hint.extra);
     LOG("Touch left area: layout %d buttons %d %d extra %#x (%s)", hint.layout, hint.first, hint.second, hint.extra, path);

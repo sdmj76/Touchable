@@ -1,15 +1,17 @@
 # Rhythm Heaven IPA
 
 This folder holds the current Rhythm Heaven package and its checksum records.
-The current package is build 35.
-It supports iPhone, iPad, a separate in-game language setting, controller haptics, and a live border glow.
+The current package is build 40.
+It supports iPhone, iPad, a separate in-game language setting, controller haptics, a live border glow, and an optional TV mode.
 The touch buttons use Liquid Glass.
-Build 35 fixes the Simplified Chinese per-app language mapping.
-The current IPA is `RhythmHeaven-build35-language-20261020.ipa`.
-Its SHA-256 is `eeafd2560a91e419b03d771fae47bc36b4cc7739110c57876aca2c2f20bf7c83`.
+Build 40 adds an optional TV mode button on the start menu. The choice applies at the next app launch.
+The current IPA is `RhythmHeaven-build40-tv-mode-20261021.ipa`.
+Its SHA-256 is `72498394b0670ce525da6ffd268533b5e0acc2c6eed2dcf19f596ed2314ed52d`.
 The local IPA is unsigned. Sign it with PlayCover or another installation tool before use.
-Build 35 reuses the build 34 patched modules, shaders, and RomFS. The reused shader chain is `98bab944ce89`.
+Build 40 reuses the build 34 patched modules, shaders, and RomFS. The reused shader chain is `98bab944ce89`.
 No device test was run.
+Builds 38 and 39 were local attempts and are not used.
+Build 35 fixes the Simplified Chinese per-app language mapping.
 Build 29 fixes BeatSpell performance and touch.
 Build 30 rewrites the border glow to make the light more natural. Build 31 makes the letterbox border follow the picture faster. Build 32 makes the transition between the picture edge and the letterbox border smoother. Build 33 declares Game Mode and stays at 60 Hz. In build 34, a pressed glass button shows only the system effect.
 The build 34 IPA is `RhythmHeaven-build34-glass-press-20261019.ipa`.
